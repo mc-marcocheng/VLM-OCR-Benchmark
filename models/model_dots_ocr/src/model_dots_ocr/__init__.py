@@ -1,0 +1,1 @@
+"""Dots.OCR model worker."""

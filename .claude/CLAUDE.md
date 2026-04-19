@@ -31,6 +31,7 @@ packages/ocr-core/                      Shared library (workspace member)
 models/                                 Isolated model projects (NOT workspace members)
   model_glm_ocr/                        GLM-OCR — transformers v5
   model_dots_mocr/                      Dots.MOCR — transformers v4
+  ...
   huggingface_cache/                    Shared HF weight cache
 config/default.yaml                     Full default configuration
 scripts/run_benchmark.py                CLI entry-point

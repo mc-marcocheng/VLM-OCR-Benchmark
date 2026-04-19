@@ -36,6 +36,7 @@ ocr-benchmark/
 ├── models/                         # Isolated model projects (NOT workspace members)
 │   ├── model_glm_ocr/              # GLM-OCR
 │   ├── model_dots_mocr/            # Dots.MOCR
+│   ├── ...
 │   └── huggingface_cache/          # Shared weight cache
 ├── scripts/
 │   ├── run_benchmark.py            # CLI entry-point

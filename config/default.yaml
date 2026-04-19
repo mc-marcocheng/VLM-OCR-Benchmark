@@ -60,6 +60,10 @@ models:
     project_dir: "models/model_glm_ocr"
     module: "model_glm_ocr.worker"
     params: {}
+  DotsOCR:
+    project_dir: "models/model_dots_ocr"
+    module: "model_dots_ocr.worker"
+    params: {}
   DotsMOCR:
     project_dir: "models/model_dots_mocr"
     module: "model_dots_mocr.worker"
