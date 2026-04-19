@@ -1,0 +1,22 @@
+# pctx configuration file
+# See https://github.com/mc-marcocheng/pctx for documentation
+
+# Additional patterns to exclude (gitignore-style)
+exclude = [
+    "data",
+    "models/huggingface_cache",
+    "results",
+]
+
+# Only include files matching these patterns (empty = include all)
+# include = ["*.rs", "*.toml"]
+
+# Truncation settings for long files
+max_lines = 1000      # Max lines per file (0 = no limit)
+# head_lines = 20      # Lines to keep at start when truncating
+# tail_lines = 10      # Lines to keep at end when truncating
+
+# Truncation settings for long lines
+# max_line_length = 500  # Max chars per line (0 = no limit)
+# head_chars = 200       # Chars to keep at line start
+# tail_chars = 100       # Chars to keep at line end

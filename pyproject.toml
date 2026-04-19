@@ -1,0 +1,26 @@
+[project]
+name = "ocr-benchmark"
+requires-python = ">=3.13"
+version = "0.1.0"
+description = "General-purpose OCR model testing & benchmarking framework."
+dependencies = [
+    "ocr-core",
+    "gradio>=6.12.0",
+    "loguru>=0.7.3",
+    "pandas>=3.0.2",
+    "label-studio>=1.23.0",
+]
+
+[project.optional-dependencies]
+gpu = ["ocr-core[gpu]"]
+chinese = ["ocr-core[chinese]"]
+optimal-matching = ["ocr-core[optimal-matching]"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+ocr-core = { workspace = true }
+
+[tool.isort]
+profile = "black"

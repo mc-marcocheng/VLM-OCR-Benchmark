@@ -1,0 +1,66 @@
+# config/default.yaml
+
+normalisation:
+  unicode_form: "NFKC"
+  lowercase: false
+  strip_whitespace: true
+  collapse_whitespace: true
+  remove_punctuation: false
+  fullwidth_to_halfwidth: false
+  traditional_to_simplified: false
+  custom_replacements: {}
+
+metrics:
+  - name: cer
+  - name: wer
+  - name: char_f1
+  - name: bleu
+    params:
+      max_n: 4
+  - name: bag_of_words
+  - name: teds
+  - name: layout_iou
+    params:
+      iou_threshold: 0.5
+  - name: reading_order
+
+benchmark:
+  runs: 3
+  warmup_runs: 1
+  timeout_seconds: 3600
+
+degradation:
+  enabled: false
+  pipelines:
+    - name: noise
+      params:
+        sigma: [10, 25, 50]
+    - name: blur
+      params:
+        radius: [1.0, 2.0, 4.0]
+    - name: jpeg
+      params:
+        quality: [30, 50, 75]
+    - name: rotate
+      params:
+        degrees: [-5, -2, 2, 5]
+    - name: dpi_reduction
+      params:
+        factor: [0.5, 0.25]
+
+data:
+  input_dir: "data/inputs"
+  groundtruth_dir: "data/groundtruths"
+  processed_dir: "data/processed"
+  results_dir: "results"
+  pdf_dpi: 200
+
+models:
+  GLMOCR:
+    project_dir: "models/model_glm_ocr"
+    module: "model_glm_ocr.worker"
+    params: {}
+  DotsMOCR:
+    project_dir: "models/model_dots_mocr"
+    module: "model_dots_mocr.worker"
+    params: {}

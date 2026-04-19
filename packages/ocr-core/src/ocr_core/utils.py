@@ -1,0 +1,93 @@
+"""VRAM helpers and miscellaneous utilities."""
+
+from __future__ import annotations
+
+import math
+import os
+import re
+from typing import Optional
+
+from loguru import logger
+
+__all__ = [
+    "fmt",
+    "get_peak_vram_mb",
+    "get_vram_usage_mb",
+    "reset_peak_vram",
+    "resolve_device",
+    "safe_filename",
+]
+
+
+def safe_filename(s: str) -> str:
+    """Sanitise a string for use in file/directory names."""
+    return re.sub(r'[^\w\-.]', '_', s)
+
+
+def get_vram_usage_mb() -> Optional[float]:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.memory_allocated(0) / (1024 ** 2)
+    except Exception:
+        pass
+    try:
+        from pynvml import (
+            nvmlDeviceGetComputeRunningProcesses,
+            nvmlDeviceGetHandleByIndex,
+            nvmlInit,
+            nvmlShutdown,
+        )
+        nvmlInit()
+        h = nvmlDeviceGetHandleByIndex(0)
+        pid = os.getpid()
+        for p in nvmlDeviceGetComputeRunningProcesses(h):
+            if p.pid == pid:
+                nvmlShutdown()
+                return p.usedGpuMemory / (1024 ** 2)
+        nvmlShutdown()
+    except Exception:
+        pass
+    return None
+
+
+def get_peak_vram_mb() -> Optional[float]:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.max_memory_allocated(0) / (1024 ** 2)
+    except Exception:
+        pass
+    return None
+
+
+def reset_peak_vram() -> None:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats(0)
+    except Exception:
+        pass
+
+
+def resolve_device(requested: str) -> str:
+    requested = requested.lower().strip()
+    if requested in ("gpu", "cuda"):
+        try:
+            import torch
+            if torch.cuda.is_available():
+                return "cuda"
+        except ImportError:
+            pass
+        logger.warning("CUDA not available — falling back to CPU")
+        return "cpu"
+    return requested  # Return as-is for "cpu" or other values
+
+
+def fmt(value, spec: str = ".4f", suffix: str = "") -> str:
+    if value is None or (isinstance(value, (int, float)) and math.isnan(value)):
+        return "N/A"
+    try:
+        return f"{value:{spec}}{suffix}"
+    except (ValueError, TypeError):
+        return str(value)
