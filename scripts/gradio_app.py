@@ -210,7 +210,8 @@ class Dashboard:
             )
             for i, r in enumerate(pred_regions):
                 cat = r.get("category", "?")
-                txt_raw = r.get("text", "").replace("\n", " ↵ ").replace("|", "\\|")
+                txt_raw = r.get("text", "").replace("\n", " ↵ ").replace("|", "&#124;")
+                txt_raw = txt_raw.replace("<", "&lt;").replace(">", "&gt;")
                 txt = (txt_raw[:60] + "...") if len(txt_raw) > 60 else txt_raw
                 bbox = r.get("bbox", {})
                 if isinstance(bbox, dict):

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import signal
 import subprocess
 import tempfile
 import time
@@ -19,6 +20,8 @@ from typing import Any
 
 import pandas as pd
 from loguru import logger
+from PIL import Image
+
 from ocr_core.config import BenchmarkConfig, load_config
 from ocr_core.data_loader import DataLoader
 from ocr_core.degradation import DegradationPipeline
@@ -27,7 +30,6 @@ from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.statistics import SummaryStats, paired_bootstrap_test, summarise
 from ocr_core.types import GroundTruth, OCRPage, WorkerResponse, WorkerTask
 from ocr_core.utils import resolve_device, safe_filename
-from PIL import Image
 
 __all__ = ["BenchmarkResult", "BenchmarkRunner", "PageResult", "RunResult"]
 
@@ -409,12 +411,12 @@ class BenchmarkRunner:
                     cwd=_REPO_ROOT,
                     encoding="utf-8",
                     errors="replace",
+                    preexec_fn=os.setsid if os.name != "nt" else None,
                 )
             except subprocess.TimeoutExpired:
-                raise RuntimeError(
-                    f"Worker {model_name} timed out after "
-                    f"{self.cfg.timeout_seconds}s"
-                )
+                if os.name != "nt":
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                raise RuntimeError(f"Worker {model_name} timed out")
 
             elapsed = time.perf_counter() - t0
             logger.info(f"Worker finished in {elapsed:.1f}s (exit={proc.returncode})")

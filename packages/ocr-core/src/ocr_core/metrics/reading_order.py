@@ -5,6 +5,7 @@ Reading-order evaluation via Kendall's τ on matched region indices.
 from __future__ import annotations
 
 import numpy as np
+
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.metrics.layout_iou import _hungarian_match
 from ocr_core.normalisation import NormalisationPipeline
@@ -61,8 +62,8 @@ class ReadingOrderMetric(Metric):
                     sim[i, j] = gt_r.bbox.iou(pred_r.bbox)
                 else:
                     # Fallback: Jaccard on normalised text (word-level)
-                    g_set = set(normaliser.apply(gt_r.text).split())
-                    p_set = set(normaliser.apply(pred_r.text).split())
+                    g_set = set(normaliser.tokenise_for_wer(gt_r.text).split())
+                    p_set = set(normaliser.tokenise_for_wer(pred_r.text).split())
                     union = g_set | p_set
                     sim[i, j] = len(g_set & p_set) / len(union) if union else 0.0
 

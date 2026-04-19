@@ -51,7 +51,9 @@ def jpeg_compress(image: Image.Image, quality: int = 50) -> Image.Image:
     buf = io.BytesIO()
     image.save(buf, format="JPEG", quality=quality)
     buf.seek(0)
-    return Image.open(buf).convert("RGB")
+    img = Image.open(buf).convert("RGB")
+    img.load()
+    return img
 
 
 def rotate(image: Image.Image, degrees: float = 5.0) -> Image.Image:

@@ -10,6 +10,7 @@ from typing import Sequence
 
 import numpy as np
 from loguru import logger
+
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.types import BBox, OCRPage
@@ -72,6 +73,14 @@ class LayoutIOUMetric(Metric):
         gt_cats = [r.category for r in gt_page.regions if r.bbox]
         pred_cats = [r.category for r in pred_page.regions if r.bbox]
 
+        if not gt_boxes and not pred_boxes:
+            return MetricResult(
+                scores={
+                    "layout_mean_iou": 1.0,
+                    "layout_precision": 1.0,
+                    "layout_recall": 1.0,
+                }
+            )
         if not gt_boxes:
             return MetricResult(
                 scores={
