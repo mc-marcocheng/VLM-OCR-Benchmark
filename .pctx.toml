@@ -6,6 +6,7 @@ exclude = [
     "data",
     "models/huggingface_cache",
     "results",
+    "LICENSE",
 ]
 
 # Only include files matching these patterns (empty = include all)
