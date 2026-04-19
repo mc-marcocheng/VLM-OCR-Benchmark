@@ -37,13 +37,17 @@ def _rotate_point(
     rad = math.radians(angle_deg)
     cos_a, sin_a = math.cos(rad), math.sin(rad)
     dx, dy = px - cx, py - cy
-    return (cx + dx * cos_a - dy * sin_a,
-            cy + dx * sin_a + dy * cos_a)
+    return (cx + dx * cos_a - dy * sin_a, cy + dx * sin_a + dy * cos_a)
 
 
 def _to_pixel_bbox(
-    x_pct: float, y_pct: float, w_pct: float, h_pct: float,
-    rotation: float, orig_w: int, orig_h: int,
+    x_pct: float,
+    y_pct: float,
+    w_pct: float,
+    h_pct: float,
+    rotation: float,
+    orig_w: int,
+    orig_h: int,
 ) -> dict[str, float]:
     """
     Convert Label Studio percentage-based (possibly rotated) bbox
@@ -55,8 +59,12 @@ def _to_pixel_bbox(
     h = h_pct / 100 * orig_h
 
     if rotation == 0:
-        return {"x1": round(x, 1), "y1": round(y, 1),
-                "x2": round(x + w, 1), "y2": round(y + h, 1)}
+        return {
+            "x1": round(x, 1),
+            "y1": round(y, 1),
+            "x2": round(x + w, 1),
+            "y2": round(y + h, 1),
+        }
 
     # Compute axis-aligned envelope of the rotated rectangle
     cx, cy = x + w / 2, y + h / 2
@@ -64,8 +72,12 @@ def _to_pixel_bbox(
     rotated = [_rotate_point(px, py, cx, cy, rotation) for px, py in corners]
     xs = [p[0] for p in rotated]
     ys = [p[1] for p in rotated]
-    return {"x1": round(min(xs), 1), "y1": round(min(ys), 1),
-            "x2": round(max(xs), 1), "y2": round(max(ys), 1)}
+    return {
+        "x1": round(min(xs), 1),
+        "y1": round(min(ys), 1),
+        "x2": round(max(xs), 1),
+        "y2": round(max(ys), 1),
+    }
 
 
 # ── Task conversion ────────────────────────────────────────
@@ -109,8 +121,13 @@ def convert_task(task: dict) -> dict | None:
         orig_h = rect["original_height"]
 
         bbox = _to_pixel_bbox(
-            val["x"], val["y"], val["width"], val["height"],
-            val.get("rotation", 0), orig_w, orig_h,
+            val["x"],
+            val["y"],
+            val["width"],
+            val["height"],
+            val.get("rotation", 0),
+            orig_w,
+            orig_h,
         )
 
         category = val["rectanglelabels"][0].lower()
@@ -122,30 +139,33 @@ def convert_task(task: dict) -> dict | None:
         elif category == "formula":
             text_format = "latex"
 
-        regions.append({
-            "text": text,
-            "category": category,
-            "bbox": bbox,
-            "text_format": text_format,
-            "order": order,
-        })
+        regions.append(
+            {
+                "text": text,
+                "category": category,
+                "bbox": bbox,
+                "text_format": text_format,
+                "order": order,
+            }
+        )
 
     full_text = "\n".join(
-        r["text"] for r in regions
-        if r["text"] and r["category"] != "picture"
+        r["text"] for r in regions if r["text"] and r["category"] != "picture"
     )
 
     # Dimensions from first result
     first = results[0]
 
     return {
-        "pages": [{
-            "page_number": 1,
-            "full_text": full_text,
-            "width": first["original_width"],
-            "height": first["original_height"],
-            "regions": regions,
-        }],
+        "pages": [
+            {
+                "page_number": 1,
+                "full_text": full_text,
+                "width": first["original_width"],
+                "height": first["original_height"],
+                "regions": regions,
+            }
+        ],
     }
 
 
@@ -157,7 +177,9 @@ def main():
         print("Usage: python scripts/convert_label_studio.py <export.json> <test_set>")
         print()
         print("Example:")
-        print("  python scripts/convert_label_studio.py project-1-at-2026-04-19.json test_1")
+        print(
+            "  python scripts/convert_label_studio.py project-1-at-2026-04-19.json test_1"
+        )
         sys.exit(1)
 
     export_path = sys.argv[1]

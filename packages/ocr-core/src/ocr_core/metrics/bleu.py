@@ -18,7 +18,7 @@ def _get_ngrams(text: str, n: int) -> list[tuple]:
     words = text.split()
     if len(words) < n:
         return []
-    return [tuple(words[i:i+n]) for i in range(len(words) - n + 1)]
+    return [tuple(words[i : i + n]) for i in range(len(words) - n + 1)]
 
 
 def _compute_precision(reference: str, hypothesis: str, n: int) -> float:
@@ -94,7 +94,9 @@ class BLEUMetric(Metric):
         self.max_n = max_n
 
     def compute(
-        self, gt_page: OCRPage, pred_page: OCRPage,
+        self,
+        gt_page: OCRPage,
+        pred_page: OCRPage,
         normaliser: NormalisationPipeline,
     ) -> MetricResult:
         reference = normaliser.tokenise_for_wer(gt_page.full_text)

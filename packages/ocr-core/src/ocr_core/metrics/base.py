@@ -11,6 +11,7 @@ from ocr_core.types import OCRPage
 @dataclass
 class MetricResult:
     """Container for one metric's output on a single page pair."""
+
     scores: dict[str, float] = field(default_factory=dict)
     details: dict[str, Any] = field(default_factory=dict)
 
@@ -27,16 +28,12 @@ class Metric(ABC):
         if not self.primary_key:
             self.primary_key = self.name
 
-    def is_applicable(
-        self, gt_page: OCRPage, pred_page: OCRPage
-    ) -> bool:
+    def is_applicable(self, gt_page: OCRPage, pred_page: OCRPage) -> bool:
         """Override to restrict when the metric is computed."""
         if not self.apply_to:
             return True
         # At least one GT region must match a requested category
-        return any(
-            r.category in self.apply_to for r in gt_page.regions
-        )
+        return any(r.category in self.apply_to for r in gt_page.regions)
 
     @abstractmethod
     def compute(
@@ -44,5 +41,4 @@ class Metric(ABC):
         gt_page: OCRPage,
         pred_page: OCRPage,
         normaliser: NormalisationPipeline,
-    ) -> MetricResult:
-        ...
+    ) -> MetricResult: ...

@@ -21,14 +21,15 @@ __all__ = [
 
 def safe_filename(s: str) -> str:
     """Sanitise a string for use in file/directory names."""
-    return re.sub(r'[^\w\-.]', '_', s)
+    return re.sub(r"[^\w\-.]", "_", s)
 
 
 def get_vram_usage_mb() -> Optional[float]:
     try:
         import torch
+
         if torch.cuda.is_available():
-            return torch.cuda.memory_allocated(0) / (1024 ** 2)
+            return torch.cuda.memory_allocated(0) / (1024**2)
     except Exception:
         pass
     try:
@@ -38,13 +39,14 @@ def get_vram_usage_mb() -> Optional[float]:
             nvmlInit,
             nvmlShutdown,
         )
+
         nvmlInit()
         h = nvmlDeviceGetHandleByIndex(0)
         pid = os.getpid()
         for p in nvmlDeviceGetComputeRunningProcesses(h):
             if p.pid == pid:
                 nvmlShutdown()
-                return p.usedGpuMemory / (1024 ** 2)
+                return p.usedGpuMemory / (1024**2)
         nvmlShutdown()
     except Exception:
         pass
@@ -54,8 +56,9 @@ def get_vram_usage_mb() -> Optional[float]:
 def get_peak_vram_mb() -> Optional[float]:
     try:
         import torch
+
         if torch.cuda.is_available():
-            return torch.cuda.max_memory_allocated(0) / (1024 ** 2)
+            return torch.cuda.max_memory_allocated(0) / (1024**2)
     except Exception:
         pass
     return None
@@ -64,6 +67,7 @@ def get_peak_vram_mb() -> Optional[float]:
 def reset_peak_vram() -> None:
     try:
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats(0)
     except Exception:
@@ -75,6 +79,7 @@ def resolve_device(requested: str) -> str:
     if requested in ("gpu", "cuda"):
         try:
             import torch
+
             if torch.cuda.is_available():
                 return "cuda"
         except ImportError:

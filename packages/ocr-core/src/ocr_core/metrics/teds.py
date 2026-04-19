@@ -4,6 +4,7 @@ Tree-Edit-Distance-based Similarity (TEDS) for HTML tables.
 Reference:
     Zhong, ShaoLab & Jimeno Yepes (2020) — PubTabNet / ICDAR 2019.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -163,14 +164,16 @@ class TEDSMetric(Metric):
         return bool(gt_page.regions_by_category("table"))
 
     def compute(
-        self, gt_page: OCRPage, pred_page: OCRPage,
+        self,
+        gt_page: OCRPage,
+        pred_page: OCRPage,
         normaliser: NormalisationPipeline,
     ) -> MetricResult:
         gt_tables = gt_page.regions_by_category("table")
         pred_tables = pred_page.regions_by_category("table")
 
         if not gt_tables:
-            return MetricResult(scores={"teds": float('nan')})
+            return MetricResult(scores={"teds": float("nan")})
         if not pred_tables:
             return MetricResult(scores={"teds": 0.0})
 

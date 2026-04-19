@@ -1,8 +1,8 @@
 """Layout detection module."""
 
-from .base import BaseLayoutDetector
-
 from typing import Optional
+
+from .base import BaseLayoutDetector
 
 _layout_import_error: Optional[BaseException] = None
 _layout_import_error_is_dependency: bool = False

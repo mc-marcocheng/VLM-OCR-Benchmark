@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 import cv2
-import torch
 import numpy as np
-from PIL import Image
-from transformers import (
-    PPDocLayoutV3ForObjectDetection,
-    PPDocLayoutV3ImageProcessor,
-)
-
+import torch
 from glmocr.layout.base import BaseLayoutDetector
 from glmocr.utils.layout_postprocess_utils import apply_layout_postprocess
 from glmocr.utils.logging import get_logger
 from glmocr.utils.visualization_utils import draw_layout_boxes
+from PIL import Image
+from transformers import PPDocLayoutV3ForObjectDetection, PPDocLayoutV3ImageProcessor
 
 if TYPE_CHECKING:
     from glmocr.config import LayoutConfig

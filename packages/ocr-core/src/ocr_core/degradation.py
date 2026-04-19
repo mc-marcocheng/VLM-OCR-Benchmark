@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from typing import Any, Callable, Sequence
 
 import numpy as np
-from PIL import Image, ImageFilter
 from loguru import logger
+from PIL import Image, ImageFilter
 
 __all__ = [
     "DegradationPipeline",
@@ -55,14 +55,16 @@ def jpeg_compress(image: Image.Image, quality: int = 50) -> Image.Image:
 
 
 def rotate(image: Image.Image, degrees: float = 5.0) -> Image.Image:
-    return image.rotate(degrees, resample=Image.BICUBIC,
-                        expand=False, fillcolor=(255, 255, 255))
+    return image.rotate(
+        degrees, resample=Image.BICUBIC, expand=False, fillcolor=(255, 255, 255)
+    )
 
 
 def reduce_dpi(image: Image.Image, factor: float = 0.5) -> Image.Image:
     w, h = image.size
-    small = image.resize((max(1, int(w * factor)), max(1, int(h * factor))),
-                         Image.LANCZOS)
+    small = image.resize(
+        (max(1, int(w * factor)), max(1, int(h * factor))), Image.LANCZOS
+    )
     return small.resize((w, h), Image.LANCZOS)
 
 
@@ -97,6 +99,7 @@ DEGRADATION_FUNCTIONS: dict[str, Callable[..., Image.Image]] = {
 @dataclass
 class DegradationVariant:
     """One specific degradation with fixed parameters."""
+
     name: str
     label: str  # human-readable, e.g. "noise_sigma=25"
     fn: Callable[..., Image.Image]

@@ -1,9 +1,10 @@
 """Visualization utilities for layout detection and other tasks."""
 
-from typing import List, Dict, Tuple
+import os
+from typing import Dict, List, Tuple
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-import os
 
 
 def get_colormap(rgb: bool = True) -> List[Tuple[int, int, int]]:

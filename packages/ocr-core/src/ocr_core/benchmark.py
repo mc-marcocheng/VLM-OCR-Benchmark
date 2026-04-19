@@ -19,8 +19,6 @@ from typing import Any
 
 import pandas as pd
 from loguru import logger
-from PIL import Image
-
 from ocr_core.config import BenchmarkConfig, load_config
 from ocr_core.data_loader import DataLoader
 from ocr_core.degradation import DegradationPipeline
@@ -29,11 +27,17 @@ from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.statistics import SummaryStats, paired_bootstrap_test, summarise
 from ocr_core.types import GroundTruth, OCRPage, WorkerResponse, WorkerTask
 from ocr_core.utils import resolve_device, safe_filename
+from PIL import Image
 
 __all__ = ["BenchmarkResult", "BenchmarkRunner", "PageResult", "RunResult"]
 
-_REPO_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
+_REPO_ROOT = os.path.abspath(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        )
+    )
+)
 
 # ── Per-page detail saved to JSON ───────────────────────────
 
@@ -58,9 +62,7 @@ class PageResult:
             "scores": self.scores,
         }
         if self.predicted_page and self.predicted_page.has_regions():
-            d["predicted_regions"] = [
-                r.to_dict() for r in self.predicted_page.regions
-            ]
+            d["predicted_regions"] = [r.to_dict() for r in self.predicted_page.regions]
         return d
 
 
@@ -87,7 +89,7 @@ class RunResult:
             for pr in self.page_results
             if metric_name in pr.scores and not math.isnan(pr.scores[metric_name])
         ]
-        return sum(vals) / len(vals) if vals else float('nan')
+        return sum(vals) / len(vals) if vals else float("nan")
 
 
 # ── Full benchmark result ───────────────────────────────────
@@ -124,8 +126,9 @@ class BenchmarkResult:
 
 
 class BenchmarkRunner:
-    def __init__(self, config: BenchmarkConfig | None = None,
-                 config_path: str | None = None):
+    def __init__(
+        self, config: BenchmarkConfig | None = None, config_path: str | None = None
+    ):
         if config is None:
             config = load_config(config_path)
         self.cfg = config
@@ -203,15 +206,15 @@ class BenchmarkRunner:
         # Degradation sweeps
         if self.cfg.degradation.enabled:
             pipeline = DegradationPipeline(
-                [{"name": s.name, "params": s.params}
-                 for s in self.cfg.degradation.pipelines]
+                [
+                    {"name": s.name, "params": s.params}
+                    for s in self.cfg.degradation.pipelines
+                ]
             )
             for variant in pipeline:
                 logger.info(f"--- Degradation: {variant.label} ---")
                 try:
-                    degraded_images = self._degrade_images(
-                        file_images, variant.apply
-                    )
+                    degraded_images = self._degrade_images(file_images, variant.apply)
                 except Exception:
                     logger.exception(
                         f"Failed to apply degradation {variant.label} — skipping"
@@ -300,9 +303,7 @@ class BenchmarkRunner:
 
                 pred_page = wp.result
                 gt_page = (
-                    gt.pages[page_idx]
-                    if gt and page_idx < len(gt.pages)
-                    else None
+                    gt.pages[page_idx] if gt and page_idx < len(gt.pages) else None
                 )
 
                 scores: dict[str, float] = {}
@@ -321,15 +322,17 @@ class BenchmarkRunner:
                                     f"Metric {metric.name} failed on {fname} p{page_idx+1}"
                                 )
 
-                page_results.append(PageResult(
-                    file=fname,
-                    page=page_idx + 1,
-                    prediction_time_seconds=wp.prediction_time_seconds,
-                    predicted_text=pred_page.full_text,
-                    ground_truth_text=gt_page.full_text if gt_page else None,
-                    scores=scores,
-                    predicted_page=pred_page,
-                ))
+                page_results.append(
+                    PageResult(
+                        file=fname,
+                        page=page_idx + 1,
+                        prediction_time_seconds=wp.prediction_time_seconds,
+                        predicted_text=pred_page.full_text,
+                        ground_truth_text=gt_page.full_text if gt_page else None,
+                        scores=scores,
+                        predicted_page=pred_page,
+                    )
+                )
 
         return RunResult(
             run_index=run_index,
@@ -380,11 +383,17 @@ class BenchmarkRunner:
                 project_dir = os.path.join(_REPO_ROOT, project_dir)
 
             cmd = [
-                "uv", "run",
-                "--directory", project_dir,
-                "python", "-m", model_cfg.module,
-                "--task", task_path,
-                "--output", output_path,
+                "uv",
+                "run",
+                "--directory",
+                project_dir,
+                "python",
+                "-m",
+                model_cfg.module,
+                "--task",
+                task_path,
+                "--output",
+                output_path,
             ]
 
             logger.info(f"Spawning: {' '.join(cmd)}")
@@ -407,9 +416,7 @@ class BenchmarkRunner:
                 )
 
             elapsed = time.perf_counter() - t0
-            logger.info(
-                f"Worker finished in {elapsed:.1f}s (exit={proc.returncode})"
-            )
+            logger.info(f"Worker finished in {elapsed:.1f}s (exit={proc.returncode})")
 
             # Log worker output even on success (debug/warning level)
             if proc.stdout and proc.stdout.strip():
@@ -471,15 +478,13 @@ class BenchmarkRunner:
     # ── Persistence ─────────────────────────────────────────
 
     def _save(self, result: BenchmarkResult) -> None:
-        out_dir = os.path.join(
-            self.cfg.data.results_dir, result.test_set
-        )
+        out_dir = os.path.join(self.cfg.data.results_dir, result.test_set)
         os.makedirs(out_dir, exist_ok=True)
 
         # Pick the last measured run for the detailed result file
         measured = result.measured_runs
-        last_run = measured[-1] if measured else (
-            result.runs[-1] if result.runs else None
+        last_run = (
+            measured[-1] if measured else (result.runs[-1] if result.runs else None)
         )
 
         data: dict[str, Any] = {
@@ -493,17 +498,20 @@ class BenchmarkRunner:
         }
 
         if last_run:
-            data.update({
-                "model_load_time_seconds": last_run.model_load_time_seconds,
-                "total_prediction_time_s": last_run.total_prediction_time_seconds,
-                "total_pages_processed": last_run.n_pages,
-                "average_prediction_time_s_per_page": (
-                    last_run.total_prediction_time_seconds / last_run.n_pages
-                    if last_run.n_pages > 0 else 0.0
-                ),
-                "resources": last_run.resources,
-                "metrics": [pr.to_dict() for pr in last_run.page_results],
-            })
+            data.update(
+                {
+                    "model_load_time_seconds": last_run.model_load_time_seconds,
+                    "total_prediction_time_s": last_run.total_prediction_time_seconds,
+                    "total_pages_processed": last_run.n_pages,
+                    "average_prediction_time_s_per_page": (
+                        last_run.total_prediction_time_seconds / last_run.n_pages
+                        if last_run.n_pages > 0
+                        else 0.0
+                    ),
+                    "resources": last_run.resources,
+                    "metrics": [pr.to_dict() for pr in last_run.page_results],
+                }
+            )
 
         # Aggregate metric summaries across runs
         metric_summaries: dict[str, dict] = {}
@@ -614,9 +622,7 @@ class BenchmarkRunner:
             df = new_row
 
         # Atomic write via temp + rename
-        fd, tmp = tempfile.mkstemp(
-            dir=os.path.dirname(csv_path) or ".", suffix=".csv"
-        )
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(csv_path) or ".", suffix=".csv")
         os.close(fd)
         df.to_csv(tmp, index=False)
         os.replace(tmp, csv_path)
@@ -633,8 +639,12 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Paired bootstrap significance test between two results."""
         key = metric_key or metric_name
-        pages_a = result_a.measured_runs[-1].page_results if result_a.measured_runs else []
-        pages_b = result_b.measured_runs[-1].page_results if result_b.measured_runs else []
+        pages_a = (
+            result_a.measured_runs[-1].page_results if result_a.measured_runs else []
+        )
+        pages_b = (
+            result_b.measured_runs[-1].page_results if result_b.measured_runs else []
+        )
 
         map_a = {
             (p.file, p.page): p.scores[key]
@@ -660,8 +670,16 @@ class BenchmarkRunner:
 
         return {
             "metric": metric_name,
-            "model_a": {"mean": sa.mean, "std": sa.std, "ci": (sa.ci_lower, sa.ci_upper)},
-            "model_b": {"mean": sb.mean, "std": sb.std, "ci": (sb.ci_lower, sb.ci_upper)},
+            "model_a": {
+                "mean": sa.mean,
+                "std": sa.std,
+                "ci": (sa.ci_lower, sa.ci_upper),
+            },
+            "model_b": {
+                "mean": sb.mean,
+                "std": sb.std,
+                "ci": (sb.ci_lower, sb.ci_upper),
+            },
             "p_value": p_value,
             "significant_at_005": p_value < 0.05,
             "n_paired_samples": len(scores_a),

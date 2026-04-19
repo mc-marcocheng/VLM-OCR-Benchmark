@@ -6,10 +6,12 @@ Loads the model directly from HuggingFace and runs inference.
 Protocol:
     python -m model_dots_mocr.worker --task task.json --output result.json
 """
+
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from typing import Any
 
@@ -17,8 +19,18 @@ import psutil
 import torch
 from loguru import logger
 from PIL import Image
-from qwen_vl_utils import process_vision_info
-from transformers import AutoModelForCausalLM, AutoProcessor
+
+# ── Configure HuggingFace Cache ──────────────────────────────
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", "..", ".."))
+CACHE_DIR = os.path.join(_REPO_ROOT, "models", "huggingface_cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Set environment variables BEFORE importing transformers to strictly enforce the cache location
+os.environ["HF_HOME"] = CACHE_DIR
+os.environ["HF_HUB_CACHE"] = CACHE_DIR
+os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
+# ─────────────────────────────────────────────────────────────
 
 from model_dots_mocr.utils import (
     MAX_PIXELS,
@@ -28,6 +40,8 @@ from model_dots_mocr.utils import (
 )
 from ocr_core.types import BBox, OCRPage, OCRRegion, WorkerPageResult, WorkerTask
 from ocr_core.utils import get_peak_vram_mb, get_vram_usage_mb, reset_peak_vram
+from qwen_vl_utils import process_vision_info
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 MODEL_ID = "rednote-hilab/dots.mocr"
 
@@ -70,6 +84,7 @@ class DotsMOCRModel:
             trust_remote_code=True,
             min_pixels=MIN_PIXELS,
             max_pixels=MAX_PIXELS,
+            cache_dir=CACHE_DIR,
         )
 
         # Determine dtype and attention implementation based on device
@@ -78,6 +93,7 @@ class DotsMOCRModel:
             # Check if flash attention is available
             try:
                 import flash_attn  # noqa: F401
+
                 attn_impl = "flash_attention_2"
             except ImportError:
                 attn_impl = "sdpa"
@@ -93,6 +109,7 @@ class DotsMOCRModel:
             device_map="auto" if self.device == "cuda" else None,
             trust_remote_code=True,
             attn_implementation=attn_impl,
+            cache_dir=CACHE_DIR,
         )
 
         if self.device == "cpu":
@@ -393,7 +410,9 @@ def main():
             )
             pred_time = time.perf_counter() - t1
 
-            logger.debug(f"Raw output ({len(output_text)} chars): {output_text[:500]}...")
+            logger.debug(
+                f"Raw output ({len(output_text)} chars): {output_text[:500]}..."
+            )
 
             # Parse output into OCRPage
             ocr_page = parse_layout_json(output_text, width, height)

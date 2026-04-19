@@ -1,8 +1,8 @@
 """Result post-processing utilities."""
 
 import re
-from typing import Optional
 from collections import Counter
+from typing import Optional
 
 
 def find_consecutive_repeat(

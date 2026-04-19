@@ -12,7 +12,6 @@ import unicodedata
 from typing import Optional
 
 from loguru import logger
-
 from ocr_core.config import NormalisationConfig
 
 __all__ = ["NormalisationPipeline"]
@@ -67,6 +66,7 @@ def _t2s(text: str) -> str:
             if _opencc_converter is None and not _opencc_unavailable:
                 try:
                     from opencc import OpenCC
+
                     _opencc_converter = OpenCC("t2s")
                 except ImportError:
                     _opencc_unavailable = True

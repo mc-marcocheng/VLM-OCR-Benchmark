@@ -3,13 +3,13 @@ Bounding-box IoU metrics with Hungarian matching.
 
 Falls back to greedy matching if scipy is unavailable.
 """
+
 from __future__ import annotations
 
 from typing import Sequence
 
 import numpy as np
 from loguru import logger
-
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.types import BBox, OCRPage, OCRRegion
@@ -28,6 +28,7 @@ def _hungarian_match(cost: np.ndarray) -> list[tuple[int, int]]:
     """Optimal assignment. Falls back to greedy if scipy is unavailable."""
     try:
         from scipy.optimize import linear_sum_assignment
+
         row_idx, col_idx = linear_sum_assignment(-cost)
         return list(zip(row_idx.tolist(), col_idx.tolist()))
     except ImportError:
@@ -39,9 +40,7 @@ def _hungarian_match(cost: np.ndarray) -> list[tuple[int, int]]:
         used_rows: set[int] = set()
         used_cols: set[int] = set()
         m, n = cost.shape
-        flat = [
-            (cost[i, j], i, j) for i in range(m) for j in range(n)
-        ]
+        flat = [(cost[i, j], i, j) for i in range(m) for j in range(n)]
         flat.sort(reverse=True)
         for _, i, j in flat:
             if i not in used_rows and j not in used_cols:
@@ -63,7 +62,9 @@ class LayoutIOUMetric(Metric):
         return gt_page.has_bboxes()
 
     def compute(
-        self, gt_page: OCRPage, pred_page: OCRPage,
+        self,
+        gt_page: OCRPage,
+        pred_page: OCRPage,
         normaliser: NormalisationPipeline,
     ) -> MetricResult:
         gt_boxes = [r.bbox for r in gt_page.regions if r.bbox]
@@ -72,17 +73,21 @@ class LayoutIOUMetric(Metric):
         pred_cats = [r.category for r in pred_page.regions if r.bbox]
 
         if not gt_boxes:
-            return MetricResult(scores={
-                "layout_mean_iou": float('nan'),
-                "layout_precision": float('nan'),
-                "layout_recall": float('nan'),
-            })
+            return MetricResult(
+                scores={
+                    "layout_mean_iou": float("nan"),
+                    "layout_precision": float("nan"),
+                    "layout_recall": float("nan"),
+                }
+            )
         if not pred_boxes:
-            return MetricResult(scores={
-                "layout_mean_iou": 0.0,
-                "layout_precision": 0.0,
-                "layout_recall": 0.0,
-            })
+            return MetricResult(
+                scores={
+                    "layout_mean_iou": 0.0,
+                    "layout_precision": 0.0,
+                    "layout_recall": 0.0,
+                }
+            )
 
         iou_mat = _iou_matrix(gt_boxes, pred_boxes)
         matches = _hungarian_match(iou_mat)

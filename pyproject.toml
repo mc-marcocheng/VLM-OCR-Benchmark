@@ -15,6 +15,7 @@ dependencies = [
 gpu = ["ocr-core[gpu]"]
 chinese = ["ocr-core[chinese]"]
 optimal-matching = ["ocr-core[optimal-matching]"]
+dev = ["pre-commit>=4.0.0"]
 
 [tool.uv.workspace]
 members = ["packages/*"]

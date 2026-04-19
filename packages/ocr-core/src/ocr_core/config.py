@@ -26,6 +26,7 @@ __all__ = [
 
 class ConfigValidationError(ValueError):
     """Raised when configuration validation fails."""
+
     pass
 
 
@@ -82,11 +83,13 @@ class BenchmarkConfig:
     warmup_runs: int = 0
     timeout_seconds: int = 3600
     normalisation: NormalisationConfig = field(default_factory=NormalisationConfig)
-    metrics: list[MetricConfig] = field(default_factory=lambda: [
-        MetricConfig(name="cer"),
-        MetricConfig(name="wer"),
-        MetricConfig(name="char_f1"),
-    ])
+    metrics: list[MetricConfig] = field(
+        default_factory=lambda: [
+            MetricConfig(name="cer"),
+            MetricConfig(name="wer"),
+            MetricConfig(name="char_f1"),
+        ]
+    )
     degradation: DegradationConfig = field(default_factory=DegradationConfig)
     data: DataConfig = field(default_factory=DataConfig)
     models: dict[str, ModelConfig] = field(default_factory=dict)
@@ -110,7 +113,9 @@ class BenchmarkConfig:
                 errors.append("metric name cannot be empty")
 
         if self.degradation.enabled and not self.degradation.pipelines:
-            errors.append("degradation.enabled=True requires at least one pipeline step")
+            errors.append(
+                "degradation.enabled=True requires at least one pipeline step"
+            )
 
         if not self.data.input_dir:
             errors.append("data.input_dir cannot be empty")
@@ -137,8 +142,9 @@ class BenchmarkConfig:
 
 
 def _build_normalisation(d: dict) -> NormalisationConfig:
-    return NormalisationConfig(**{k: v for k, v in d.items()
-                                  if k in NormalisationConfig.__dataclass_fields__})
+    return NormalisationConfig(
+        **{k: v for k, v in d.items() if k in NormalisationConfig.__dataclass_fields__}
+    )
 
 
 def _build_metric(d: dict | str) -> MetricConfig:
@@ -197,12 +203,12 @@ def load_config(path: str | None = None) -> BenchmarkConfig:
 
     if "data" in raw:
         d = raw["data"]
-        cfg.data = DataConfig(**{k: v for k, v in d.items()
-                                  if k in DataConfig.__dataclass_fields__})
+        cfg.data = DataConfig(
+            **{k: v for k, v in d.items() if k in DataConfig.__dataclass_fields__}
+        )
 
     if "models" in raw:
-        cfg.models = {name: _build_model(body)
-                      for name, body in raw["models"].items()}
+        cfg.models = {name: _build_model(body) for name, body in raw["models"].items()}
 
     cfg._source_path = path or ""
     cfg.validate()

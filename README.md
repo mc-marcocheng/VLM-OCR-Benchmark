@@ -410,7 +410,13 @@ canonical types are defined in `ocr_core.types`.
 
 ---
 
-## Adding a New Model
+## Contributing
+
+### AI Assistant Guides
+
+If you are using an AI assistant (like Claude or GitHub Copilot) to help develop, point it to the `.claude/CLAUDE.md` and `models/.claude/CLAUDE.md` files which contain architecture rules and boilerplate.
+
+### Adding a New Model
 
 1. Create a project directory:
 
@@ -446,14 +452,11 @@ canonical types are defined in `ocr_core.types`.
    ```
 
 3. Implement the worker in `src/model_myocr/worker.py`:
+   *(See `models/.claude/CLAUDE.md` for a complete boilerplate with VRAM tracking.)*
 
    ```python
-   import argparse, json, time
-   from ocr_core.types import OCRPage, OCRRegion, WorkerTask
-
-   def predict(image_path: str) -> OCRPage:
-       # Your inference logic here
-       return OCRPage(full_text="...", regions=[...])
+   import argparse, json, time, psutil
+   from ocr_core.types import OCRPage, WorkerTask, WorkerResponse, WorkerPageResult
 
    def main():
        parser = argparse.ArgumentParser()
@@ -464,21 +467,23 @@ canonical types are defined in `ocr_core.types`.
        with open(args.task) as f:
            task = WorkerTask.from_dict(json.load(f))
 
+       # Track load time...
+       t0 = time.perf_counter()
+       # model = load_model(...)
+       load_time = time.perf_counter() - t0
+
        pages = []
        for img_path in task.image_paths:
            t0 = time.perf_counter()
-           result = predict(img_path)
-           elapsed = time.perf_counter() - t0
-           pages.append({
-               "image_path": img_path,
-               "prediction_time_seconds": round(elapsed, 4),
-               "result": result.to_dict(),
-           })
+           # result_page = predict(img_path)
+           pred_time = time.perf_counter() - t0
+           pages.append(WorkerPageResult(
+               image_path=img_path, prediction_time_seconds=pred_time, result=result_page
+           ))
 
-       output = {"pages": pages, "model_load_time_seconds": 0.0,
-                 "peak_ram_mb": 0.0}  # add real resource tracking
+       response = WorkerResponse(pages=pages, model_load_time_seconds=load_time)
        with open(args.output, "w") as f:
-           json.dump(output, f)
+           json.dump(response.to_dict(), f)
 
    if __name__ == "__main__":
        main()

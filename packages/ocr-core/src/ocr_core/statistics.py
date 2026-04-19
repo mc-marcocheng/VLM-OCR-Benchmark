@@ -40,9 +40,14 @@ def summarise(values: Sequence[float], confidence: float = 0.95) -> SummaryStats
     lo, hi = bootstrap_ci(arr, confidence=confidence)
 
     return SummaryStats(
-        mean=mean, std=std, median=median,
-        ci_lower=lo, ci_upper=hi,
-        min=float(np.min(arr)), max=float(np.max(arr)), n=n,
+        mean=mean,
+        std=std,
+        median=median,
+        ci_lower=lo,
+        ci_upper=hi,
+        min=float(np.min(arr)),
+        max=float(np.max(arr)),
+        n=n,
     )
 
 

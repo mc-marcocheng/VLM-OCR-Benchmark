@@ -1,15 +1,14 @@
 """Image processing utilities."""
 
-import io
-import fitz
-import math
 import base64
+import io
+import math
 from io import BytesIO
 
+import fitz
 import numpy as np
-from PIL import Image, ImageDraw
-
 from glmocr.utils.logging import get_logger
+from PIL import Image, ImageDraw
 
 logger = get_logger(__name__)
 

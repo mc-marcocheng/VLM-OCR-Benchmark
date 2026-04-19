@@ -21,14 +21,28 @@ pillow_heif.register_heif_opener()
 
 __all__ = ["DataLoader"]
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif",
-              ".heic", ".heif", ".webp"}
+IMAGE_EXTS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".heic",
+    ".heif",
+    ".webp",
+}
 DOC_EXTS = {".pdf"}
 
 
 class DataLoader:
-    def __init__(self, input_dir: str, processed_dir: str,
-                 groundtruth_dir: str, pdf_dpi: int = 200):
+    def __init__(
+        self,
+        input_dir: str,
+        processed_dir: str,
+        groundtruth_dir: str,
+        pdf_dpi: int = 200,
+    ):
         self.input_dir = os.path.abspath(input_dir)
         self.processed_dir = os.path.abspath(processed_dir)
         self.groundtruth_dir = os.path.abspath(groundtruth_dir)
@@ -53,9 +67,7 @@ class DataLoader:
 
     # ── Load input ──────────────────────────────────────────
 
-    def ensure_cached(
-        self, test_set: str, file_name: str
-    ) -> list[str]:
+    def ensure_cached(self, test_set: str, file_name: str) -> list[str]:
         """
         Ensure page images are cached and return their paths.
         Does NOT load images into memory.
@@ -152,9 +164,7 @@ class DataLoader:
         else:
             texts = [content.strip()]
 
-        pages = [
-            OCRPage(page_number=i + 1, full_text=t) for i, t in enumerate(texts)
-        ]
+        pages = [OCRPage(page_number=i + 1, full_text=t) for i, t in enumerate(texts)]
         logger.debug(f"Loaded TXT GT ({len(pages)} pages): {path}")
         return GroundTruth(source_file=file_name, pages=pages)
 
@@ -164,7 +174,8 @@ class DataLoader:
         if not os.path.isdir(self.input_dir):
             return []
         return sorted(
-            d for d in os.listdir(self.input_dir)
+            d
+            for d in os.listdir(self.input_dir)
             if os.path.isdir(os.path.join(self.input_dir, d))
         )
 

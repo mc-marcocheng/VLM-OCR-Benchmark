@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from jiwer import process_words
-
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.types import OCRPage
@@ -11,7 +10,9 @@ class WERMetric(Metric):
     name = "wer"
 
     def compute(
-        self, gt_page: OCRPage, pred_page: OCRPage,
+        self,
+        gt_page: OCRPage,
+        pred_page: OCRPage,
         normaliser: NormalisationPipeline,
     ) -> MetricResult:
         # CJK-aware: use tokenise_for_wer which inserts spaces around each
@@ -20,7 +21,7 @@ class WERMetric(Metric):
         hypothesis = normaliser.tokenise_for_wer(pred_page.full_text)
 
         if not reference.strip():
-            return MetricResult(scores={"wer": float('nan')})
+            return MetricResult(scores={"wer": float("nan")})
         if not hypothesis.strip():
             return MetricResult(scores={"wer": 1.0})
 

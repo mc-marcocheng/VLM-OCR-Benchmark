@@ -12,10 +12,10 @@ Applies to:
 
 from __future__ import annotations
 
-import re
 import json
+import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Dict, Tuple, Any
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 try:  # Optional dependency for better English word validation quality.
     from wordfreq import zipf_frequency
@@ -25,8 +25,8 @@ except Exception:  # pragma: no cover
 from glmocr.postprocess.base_post_processor import BasePostProcessor
 from glmocr.utils.logging import get_logger, get_profiler
 from glmocr.utils.result_postprocess_utils import (
-    clean_repeated_content,
     clean_formula_number,
+    clean_repeated_content,
     normalize_inline_formula,
 )
 

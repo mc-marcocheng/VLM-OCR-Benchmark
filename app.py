@@ -20,6 +20,7 @@ INPUT_DIR = os.path.join(_ROOT, "data", "inputs")
 
 # ── Helpers ─────────────────────────────────────────────────
 
+
 def _safe_ls(path):
     return sorted(os.listdir(path)) if os.path.isdir(path) else []
 
@@ -49,10 +50,10 @@ def _parse_results(ts):
         except (json.JSONDecodeError, OSError):
             pass
         if not model or not device:
-            stem = f[:-len(suffix)]
+            stem = f[: -len(suffix)]
             idx = stem.rfind("_")
             if idx > 0:
-                model, device = stem[:idx], stem[idx + 1:]
+                model, device = stem[:idx], stem[idx + 1 :]
         if model and device:
             yield model, device
 
@@ -105,6 +106,7 @@ def _slider(minimum=1, maximum=1, value=1):
 
 # ── Summary ─────────────────────────────────────────────────
 
+
 def load_summary():
     csv = os.path.join(RESULTS_DIR, "summary.csv")
     if not os.path.isfile(csv):
@@ -114,6 +116,7 @@ def load_summary():
 
 
 # ── Explorer ────────────────────────────────────────────────
+
 
 def _cascade(ts=None, model=None):
     tss = _list_test_sets()
@@ -140,7 +143,12 @@ def init_explorer():
 
 def on_ts(ts):
     _, files, models, mdl, devices, first, n = _cascade(ts)
-    return _dd(files, first), _dd(models, mdl), _dd(devices, devices[0] if devices else None), _slider(1, n, 1)
+    return (
+        _dd(files, first),
+        _dd(models, mdl),
+        _dd(devices, devices[0] if devices else None),
+        _slider(1, n, 1),
+    )
 
 
 def on_model(ts, m):
@@ -184,7 +192,10 @@ def load_explorer(ts, fname, model, device, page):
 
     rows = []
     for m in file_metrics:
-        row = {"Page": m.get("page", "?"), "Time (s)": _fmt(m.get("prediction_time_seconds"), ".3f")}
+        row = {
+            "Page": m.get("page", "?"),
+            "Time (s)": _fmt(m.get("prediction_time_seconds"), ".3f"),
+        }
         for sk in score_keys:
             row[sk.upper()] = _fmt(m.get("scores", {}).get(sk))
         rows.append(row)
@@ -251,6 +262,7 @@ def load_explorer(ts, fname, model, device, page):
 
 # ── Compare ─────────────────────────────────────────────────
 
+
 def init_compare():
     ts, files, models, mdl, devices, first, _ = _cascade()
     return (
@@ -265,7 +277,13 @@ def init_compare():
 
 def on_cmp_ts(ts):
     _, files, models, mdl, devices, first, _ = _cascade(ts)
-    return _dd(files, first), _dd(models, mdl), _dd(models, mdl), _dd(devices, devices[0] if devices else None), _dd(devices, devices[0] if devices else None)
+    return (
+        _dd(files, first),
+        _dd(models, mdl),
+        _dd(models, mdl),
+        _dd(devices, devices[0] if devices else None),
+        _dd(devices, devices[0] if devices else None),
+    )
 
 
 def on_cmp_model(ts, m):
@@ -282,14 +300,19 @@ def load_compare(ts, fname, ma, da, mb, db):
         data = _load_result(ts, model, dev)
         if not data:
             return "", "*No data*"
-        file_entries = [entry for entry in data.get("metrics", []) if entry["file"] == fname]
+        file_entries = [
+            entry for entry in data.get("metrics", []) if entry["file"] == fname
+        ]
         pred = "\n\n".join(
             f"── Page {entry.get('page', '?')} ──\n{entry['predicted_text']}"
-            for entry in file_entries if entry.get("predicted_text")
+            for entry in file_entries
+            if entry.get("predicted_text")
         )
 
         summaries = data.get("metric_summaries", {})
-        info = " | ".join(f"**{n.upper()}:** {s['mean']:.4f}" for n, s in summaries.items())
+        info = " | ".join(
+            f"**{n.upper()}:** {s['mean']:.4f}" for n, s in summaries.items()
+        )
         res = data.get("resources", {})
         info += f" | **RAM:** {_fmt(res.get('peak_ram_mb'), '.0f', ' MB')}"
         info += f" | **VRAM:** {_fmt(res.get('peak_vram_mb'), '.0f', ' MB')}"
@@ -303,7 +326,9 @@ def load_compare(ts, fname, ma, da, mb, db):
 # ── Build UI ────────────────────────────────────────────────
 
 with gr.Blocks(title="OCR Benchmark Dashboard", theme=gr.themes.Soft()) as demo:
-    gr.Markdown("# 🔍 OCR Benchmarking Dashboard\nEvaluate and compare OCR models with comprehensive metrics.")
+    gr.Markdown(
+        "# 🔍 OCR Benchmarking Dashboard\nEvaluate and compare OCR models with comprehensive metrics."
+    )
 
     with gr.Tab("📊 Summary"):
         gr.Markdown("### All benchmark runs")
@@ -318,7 +343,14 @@ with gr.Blocks(title="OCR Benchmark Dashboard", theme=gr.themes.Soft()) as demo:
                 e_file = gr.Dropdown(label="Input File", choices=[], interactive=True)
                 e_model = gr.Dropdown(label="Model", choices=[], interactive=True)
                 e_dev = gr.Dropdown(label="Device", choices=[], interactive=True)
-                e_page = gr.Slider(label="Page", minimum=1, maximum=1, step=1, value=1, interactive=True)
+                e_page = gr.Slider(
+                    label="Page",
+                    minimum=1,
+                    maximum=1,
+                    step=1,
+                    value=1,
+                    interactive=True,
+                )
                 e_btn = gr.Button("Load", variant="primary")
                 e_status = gr.Textbox(label="Status", interactive=False, lines=2)
             with gr.Column(scale=2):
@@ -360,16 +392,26 @@ with gr.Blocks(title="OCR Benchmark Dashboard", theme=gr.themes.Soft()) as demo:
         c_btn = gr.Button("Compare", variant="primary")
         with gr.Row():
             with gr.Column():
-                c_pa = gr.Textbox(label="Model A — Predicted", lines=14, interactive=False)
+                c_pa = gr.Textbox(
+                    label="Model A — Predicted", lines=14, interactive=False
+                )
                 c_ia = gr.Markdown()
             with gr.Column():
-                c_pb = gr.Textbox(label="Model B — Predicted", lines=14, interactive=False)
+                c_pb = gr.Textbox(
+                    label="Model B — Predicted", lines=14, interactive=False
+                )
                 c_ib = gr.Markdown()
 
-        c_ts.change(fn=on_cmp_ts, inputs=[c_ts], outputs=[c_file, c_ma, c_mb, c_da, c_db])
+        c_ts.change(
+            fn=on_cmp_ts, inputs=[c_ts], outputs=[c_file, c_ma, c_mb, c_da, c_db]
+        )
         c_ma.change(fn=on_cmp_model, inputs=[c_ts, c_ma], outputs=[c_da])
         c_mb.change(fn=on_cmp_model, inputs=[c_ts, c_mb], outputs=[c_db])
-        c_btn.click(fn=load_compare, inputs=[c_ts, c_file, c_ma, c_da, c_mb, c_db], outputs=[c_pa, c_ia, c_pb, c_ib])
+        c_btn.click(
+            fn=load_compare,
+            inputs=[c_ts, c_file, c_ma, c_da, c_mb, c_db],
+            outputs=[c_pa, c_ia, c_pb, c_ib],
+        )
 
     demo.load(fn=init_explorer, outputs=[e_ts, e_file, e_model, e_dev, e_page])
     demo.load(fn=init_compare, outputs=[c_ts, c_file, c_ma, c_mb, c_da, c_db])

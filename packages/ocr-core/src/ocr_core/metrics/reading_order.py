@@ -1,10 +1,10 @@
 """
 Reading-order evaluation via Kendall's τ on matched region indices.
 """
+
 from __future__ import annotations
 
 import numpy as np
-
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.metrics.layout_iou import _hungarian_match
 from ocr_core.normalisation import NormalisationPipeline
@@ -39,14 +39,16 @@ class ReadingOrderMetric(Metric):
         return len(gt_ordered) >= 2
 
     def compute(
-        self, gt_page: OCRPage, pred_page: OCRPage,
+        self,
+        gt_page: OCRPage,
+        pred_page: OCRPage,
         normaliser: NormalisationPipeline,
     ) -> MetricResult:
         gt_regions = [r for r in gt_page.regions if r.order >= 0]
         pred_regions = [r for r in pred_page.regions if r.order >= 0]
 
         if len(gt_regions) < 2:
-            return MetricResult(scores={"reading_order_tau": float('nan')})
+            return MetricResult(scores={"reading_order_tau": float("nan")})
         if len(pred_regions) < 2:
             return MetricResult(scores={"reading_order_tau": 0.0})
 
@@ -72,7 +74,7 @@ class ReadingOrderMetric(Metric):
         pred_orders = [pred_regions[j].order for i, j in matches if sim[i, j] > 0]
 
         if len(gt_orders) < 2:
-            return MetricResult(scores={"reading_order_tau": float('nan')})
+            return MetricResult(scores={"reading_order_tau": float("nan")})
 
         tau = _kendall_tau(gt_orders, pred_orders)
         return MetricResult(scores={"reading_order_tau": tau})

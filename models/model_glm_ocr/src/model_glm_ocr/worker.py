@@ -8,6 +8,7 @@ Two-stage pipeline matching the official GLM-OCR SDK:
 Protocol:
     python -m model_glm_ocr.worker --task task.json --output result.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,16 +18,16 @@ import time
 
 import psutil
 import torch
-from loguru import logger
-from PIL import Image
-from transformers import AutoModelForImageTextToText, AutoProcessor
-
 from glmocr.config import LayoutConfig
 from glmocr.layout import PPDocLayoutDetector, _layout_import_error
 from glmocr.utils.image_utils import crop_image_region
 from glmocr.utils.result_postprocess_utils import clean_repeated_content
+from huggingface_hub import snapshot_download
+from loguru import logger
 from ocr_core.types import BBox, OCRPage, OCRRegion, WorkerTask
 from ocr_core.utils import get_peak_vram_mb, get_vram_usage_mb, reset_peak_vram
+from PIL import Image
+from transformers import AutoModelForImageTextToText, AutoProcessor
 
 MODEL_ID = "zai-org/GLM-OCR"
 LAYOUT_MODEL_ID = "PaddlePaddle/PP-DocLayoutV3_safetensors"
@@ -38,19 +39,21 @@ CACHE_DIR = os.path.join(_REPO_ROOT, "models", "huggingface_cache")
 # Maps the layout detector's task_type → VLM prompt
 # (these are the exact prompts the GLM-OCR model was trained with)
 TASK_PROMPTS = {
-    "text":    "Text Recognition:",
-    "table":   "Table Recognition:",
+    "text": "Text Recognition:",
+    "table": "Table Recognition:",
     "formula": "Formula Recognition:",
 }
 
 
 # ── Helpers ──────────────────────────────────────────────────
 
+
 def _get_ram() -> float:
-    return psutil.Process().memory_info().rss / (1024 ** 2)
+    return psutil.Process().memory_info().rss / (1024**2)
 
 
 # ── Model loading ───────────────────────────────────────────
+
 
 def load_layout_detector(device: str = "cpu") -> PPDocLayoutDetector:
     """Load PP-DocLayoutV3 for layout detection.
@@ -63,8 +66,12 @@ def load_layout_detector(device: str = "cpu") -> PPDocLayoutDetector:
         ) from _layout_import_error
 
     os.makedirs(CACHE_DIR, exist_ok=True)
+
+    # Explicitly cache the layout model into the designated directory
+    cached_model_dir = snapshot_download(repo_id=LAYOUT_MODEL_ID, cache_dir=CACHE_DIR)
+
     config = LayoutConfig(
-        model_dir=LAYOUT_MODEL_ID,
+        model_dir=cached_model_dir,
         device=device,
     )
     detector = PPDocLayoutDetector(config)
@@ -120,21 +127,21 @@ def recognize_region(
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": image},   # ← "image" not "content"
+                {"type": "image", "image": image},  # ← "image" not "content"
                 {"type": "text", "text": prompt},
             ],
         }
     ]
     text_prompt = processor.apply_chat_template(
         messages,
-        tokenize=False,              # ← text only
+        tokenize=False,  # ← text only
         add_generation_prompt=True,
     )
 
     # ── Step 2: process text + image together ────────────────
     inputs = processor(
         text=[text_prompt],
-        images=[image],               # ← images passed explicitly
+        images=[image],  # ← images passed explicitly
         return_tensors="pt",
         padding=True,
     ).to(model.device)
@@ -145,12 +152,12 @@ def recognize_region(
         gen = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            temperature=0.0,           # ← greedy, matching SDK
-            repetition_penalty=1.1,    # ← matching SDK
-            do_sample=False,           # ← deterministic
+            temperature=0.0,  # ← greedy, matching SDK
+            repetition_penalty=1.1,  # ← matching SDK
+            do_sample=False,  # ← deterministic
         )
 
-    new_tokens = gen[0][inputs["input_ids"].shape[1]:]
+    new_tokens = gen[0][inputs["input_ids"].shape[1] :]
     raw = processor.decode(new_tokens, skip_special_tokens=True)
 
     # ── Step 4: strip markdown fences + hallucination guard ──
@@ -173,7 +180,8 @@ def predict(
 
     # ── Stage 1: layout detection ────────────────────────────
     layout_results, _vis = layout_detector.process(
-        [image], save_visualization=False,
+        [image],
+        save_visualization=False,
     )
     regions_raw = layout_results[0] if layout_results else []
     logger.info(
@@ -204,9 +212,14 @@ def predict(
 
         # "skip" = image/chart — keep bbox but no text recognition
         if task_type == "skip":
-            ocr_regions.append(OCRRegion(
-                text="", category=label, bbox=bbox, order=order,
-            ))
+            ocr_regions.append(
+                OCRRegion(
+                    text="",
+                    category=label,
+                    bbox=bbox,
+                    order=order,
+                )
+            )
             continue
 
         # Crop region and recognise with VLM
@@ -214,15 +227,24 @@ def predict(
             polygon = region.get("polygon")
             cropped = crop_image_region(image, bbox_2d, polygon)
             text = recognize_region(
-                processor, model, cropped, task_type, max_new_tokens,
+                processor,
+                model,
+                cropped,
+                task_type,
+                max_new_tokens,
             )
         except Exception as e:
             logger.warning(f"Recognition failed for region {order} ({label}): {e}")
             text = ""
 
-        ocr_regions.append(OCRRegion(
-            text=text, category=label, bbox=bbox, order=order,
-        ))
+        ocr_regions.append(
+            OCRRegion(
+                text=text,
+                category=label,
+                bbox=bbox,
+                order=order,
+            )
+        )
         if text:
             text_parts.append(text)
 
@@ -236,6 +258,7 @@ def predict(
 
 
 # ── CLI entry-point ─────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -270,7 +293,10 @@ def main():
         error = None
         try:
             result = predict(
-                processor, model, layout_detector, img_path,
+                processor,
+                model,
+                layout_detector,
+                img_path,
                 max_new_tokens=max_new_tokens,
             )
         except Exception as e:
@@ -280,13 +306,15 @@ def main():
         elapsed = time.perf_counter() - t1
         cur_ram = _get_ram()
         peak_ram = max(peak_ram, cur_ram)
-        pages.append({
-            "image_path": img_path,
-            "prediction_time_seconds": round(elapsed, 4),
-            "ram_after_mb": round(cur_ram, 2),
-            "result": result.to_dict(),
-            "error": error,
-        })
+        pages.append(
+            {
+                "image_path": img_path,
+                "prediction_time_seconds": round(elapsed, 4),
+                "ram_after_mb": round(cur_ram, 2),
+                "result": result.to_dict(),
+                "error": error,
+            }
+        )
 
     layout_detector.stop()
 
@@ -295,9 +323,13 @@ def main():
         "ram_before_load_mb": round(ram_before, 2),
         "ram_after_load_mb": round(ram_after, 2),
         "peak_ram_mb": round(peak_ram, 2),
-        "vram_before_load_mb": round(vram_before, 2) if vram_before is not None else None,
+        "vram_before_load_mb": (
+            round(vram_before, 2) if vram_before is not None else None
+        ),
         "vram_after_load_mb": round(vram_after, 2) if vram_after is not None else None,
-        "peak_vram_mb": round(get_peak_vram_mb(), 2) if get_peak_vram_mb() is not None else None,
+        "peak_vram_mb": (
+            round(get_peak_vram_mb(), 2) if get_peak_vram_mb() is not None else None
+        ),
         "pages": pages,
     }
 

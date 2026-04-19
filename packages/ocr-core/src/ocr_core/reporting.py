@@ -27,7 +27,7 @@ def generate_markdown_report(
 
         # Metric summary table
         header = "| Metric | Mean | Std | 95% CI |"
-        sep    = "|--------|------|-----|--------|"
+        sep = "|--------|------|-----|--------|"
         lines += [header, sep]
         for m in metrics:
             ss = result.score_summary(m.primary_key)

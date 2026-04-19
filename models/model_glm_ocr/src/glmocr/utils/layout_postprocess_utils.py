@@ -1,7 +1,8 @@
 """Layout post-processing utilities."""
 
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
-from typing import List, Dict, Tuple, Union
 
 
 def iou(box1, box2):

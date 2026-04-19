@@ -1,10 +1,11 @@
 """Image utilities for Dots.MOCR."""
+
 from __future__ import annotations
 
 import math
-from PIL import Image
 
-from model_dots_mocr.utils.consts import IMAGE_FACTOR, MIN_PIXELS, MAX_PIXELS
+from model_dots_mocr.utils.consts import IMAGE_FACTOR, MAX_PIXELS, MIN_PIXELS
+from PIL import Image
 
 
 def round_by_factor(number: int, factor: int) -> int:
@@ -50,8 +51,11 @@ def smart_resize(
     current_pixels = width * height
 
     # If within bounds and already aligned, return as-is
-    if (min_pixels <= current_pixels <= max_pixels and
-        width % factor == 0 and height % factor == 0):
+    if (
+        min_pixels <= current_pixels <= max_pixels
+        and width % factor == 0
+        and height % factor == 0
+    ):
         return image
 
     # Calculate scale factor

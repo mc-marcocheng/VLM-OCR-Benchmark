@@ -75,19 +75,21 @@ class BBox:
 
 # ── OCR region ──────────────────────────────────────────────
 
-REGION_CATEGORIES = frozenset({
-    "text",
-    "title",
-    "section-header",
-    "caption",
-    "footnote",
-    "page-header",
-    "page-footer",
-    "list-item",
-    "table",
-    "formula",
-    "picture",
-})
+REGION_CATEGORIES = frozenset(
+    {
+        "text",
+        "title",
+        "section-header",
+        "caption",
+        "footnote",
+        "page-header",
+        "page-footer",
+        "list-item",
+        "table",
+        "formula",
+        "picture",
+    }
+)
 
 TEXT_FORMATS = frozenset({"plain", "markdown", "latex", "html"})
 

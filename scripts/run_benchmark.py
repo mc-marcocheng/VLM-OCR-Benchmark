@@ -12,7 +12,6 @@ import argparse
 import sys
 
 from loguru import logger
-
 from ocr_core.benchmark import BenchmarkRunner
 from ocr_core.config import load_config
 from ocr_core.reporting import generate_markdown_report
