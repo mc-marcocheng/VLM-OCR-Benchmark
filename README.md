@@ -1,4 +1,4 @@
-# 🔍 OCR Benchmark
+# OCR Benchmark
 
 A general-purpose framework for evaluating and comparing OCR models with
 comprehensive metrics, statistical rigor, and an interactive dashboard.
