@@ -60,7 +60,7 @@ class DataLoader:
         with fitz.open(pdf_path) as doc:
             for i, page in enumerate(doc):
                 pix = page.get_pixmap(matrix=mat)
-                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
                 out = os.path.join(out_dir, f"page_{i + 1:04d}.png")
                 img.save(out, optimize=True)
                 paths.append(out)

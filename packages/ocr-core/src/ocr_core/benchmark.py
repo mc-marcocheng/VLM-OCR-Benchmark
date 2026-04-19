@@ -403,6 +403,10 @@ class BenchmarkRunner:
             t0 = time.perf_counter()
 
             try:
+                if os.name != "nt":
+                    preexec_fn: Any = os.setsid  # type: ignore[attr-defined]
+                else:
+                    preexec_fn = None
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -411,12 +415,17 @@ class BenchmarkRunner:
                     cwd=_REPO_ROOT,
                     encoding="utf-8",
                     errors="replace",
-                    preexec_fn=os.setsid if os.name != "nt" else None,
+                    preexec_fn=preexec_fn,
                 )
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as exc:
                 if os.name != "nt":
-                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                raise RuntimeError(f"Worker {model_name} timed out")
+                    pid = exc.pid  # type: ignore[attr-defined]
+                    if pid is not None:
+                        os.killpg(  # type: ignore[attr-defined]
+                            os.getpgid(pid),  # type: ignore[attr-defined]
+                            signal.SIGKILL,  # type: ignore[attr-defined]
+                        )
+                raise RuntimeError(f"Worker {model_name} timed out") from exc
 
             elapsed = time.perf_counter() - t0
             logger.info(f"Worker finished in {elapsed:.1f}s (exit={proc.returncode})")
@@ -545,11 +554,11 @@ class BenchmarkRunner:
         if result.degradation_runs:
             deg_data: list[dict] = []
             for dr in result.degradation_runs:
-                entry = {"label": dr.degradation_label, "scores": {}}
+                entry: dict[str, Any] = {"label": dr.degradation_label, "scores": {}}
                 for m in self.metrics:
                     v = dr.aggregate_score(m.primary_key)
                     if not math.isnan(v):
-                        entry["scores"][m.name] = round(v, 6)
+                        entry["scores"][m.name] = round(v, 6)  # type: ignore[index]
                 deg_data.append(entry)
             data["degradation_results"] = deg_data
 

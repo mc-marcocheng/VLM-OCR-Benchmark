@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import math
 
-from model_dots_mocr.utils.consts import IMAGE_FACTOR, MAX_PIXELS, MIN_PIXELS
 from PIL import Image
+
+from model_dots_mocr.utils.consts import IMAGE_FACTOR, MAX_PIXELS, MIN_PIXELS
 
 
 def round_by_factor(number: int, factor: int) -> int:

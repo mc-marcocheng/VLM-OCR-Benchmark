@@ -19,16 +19,17 @@ import time
 
 import psutil
 import torch
+from huggingface_hub import snapshot_download
+from loguru import logger
+from PIL import Image
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
 from glmocr.config import LayoutConfig
 from glmocr.layout import PPDocLayoutDetector, _layout_import_error
 from glmocr.utils.image_utils import crop_image_region
 from glmocr.utils.result_postprocess_utils import clean_repeated_content
-from huggingface_hub import snapshot_download
-from loguru import logger
 from ocr_core.types import BBox, OCRPage, OCRRegion, WorkerTask
 from ocr_core.utils import get_peak_vram_mb, get_vram_usage_mb, reset_peak_vram
-from PIL import Image
-from transformers import AutoModelForImageTextToText, AutoProcessor
 
 MODEL_ID = "zai-org/GLM-OCR"
 LAYOUT_MODEL_ID = "PaddlePaddle/PP-DocLayoutV3_safetensors"

@@ -41,4 +41,4 @@ packages = ["src/model_dots_mocr"]
 
 [tool.isort]
 profile = "black"
-known_first_party = ["ocr_core"]
+known_first_party = ["ocr_core", "model_dots_mocr"]

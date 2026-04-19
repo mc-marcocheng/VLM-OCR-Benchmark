@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from loguru import logger
@@ -32,7 +32,7 @@ class ConfigValidationError(ValueError):
 
 @dataclass
 class NormalisationConfig:
-    unicode_form: str = "NFKC"
+    unicode_form: Literal["NFC", "NFD", "NFKC", "NFKD", ""] = "NFKC"
     lowercase: bool = False
     strip_whitespace: bool = True
     collapse_whitespace: bool = True

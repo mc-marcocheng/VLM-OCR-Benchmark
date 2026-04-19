@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import threading
 import unicodedata
-from typing import Optional
+from typing import Literal, Optional
 
 from loguru import logger
 
@@ -106,7 +106,8 @@ class NormalisationPipeline:
 
         # 1. Unicode normalisation
         if self.cfg.unicode_form:
-            text = unicodedata.normalize(self.cfg.unicode_form, text)
+            form: Literal["NFC", "NFD", "NFKC", "NFKD"] = self.cfg.unicode_form
+            text = unicodedata.normalize(form, text)
 
         # 2. Full-width → half-width
         if self.cfg.fullwidth_to_halfwidth:

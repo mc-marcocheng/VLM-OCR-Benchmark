@@ -44,4 +44,4 @@ packages = ["src/model_glm_ocr", "src/glmocr"]
 
 [tool.isort]
 profile = "black"
-known_first_party = ["glmocr", "ocr_core"]
+known_first_party = ["ocr_core", "glmocr"]
