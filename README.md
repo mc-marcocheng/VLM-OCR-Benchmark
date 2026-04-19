@@ -140,10 +140,15 @@ uv run scripts/run_benchmark.py \
 ### Launch the Dashboard
 
 ```bash
-uv run app.py
+uv run scripts/gradio_app.py
 ```
 
-Opens a Gradio interface at `http://localhost:7860` with three tabs:
+You can also customize the launch parameters (e.g., to run on a specific port, share publicly, or use a custom config):
+```bash
+uv run scripts/gradio_app.py --host 0.0.0.0 --port 8080 --share --config config/default.yaml
+```
+
+Opens a Gradio interface at `http://127.0.0.1:7860` (or your specified host/port) with three tabs:
 
 - **📊 Summary** — table of all benchmark runs from `results/summary.csv`.
 - **🔎 Explorer** — select a test set, file, model, and device to inspect
@@ -153,11 +158,14 @@ Opens a Gradio interface at `http://localhost:7860` with three tabs:
 
 ### Convert Label Studio Annotations
 
-```bash
-uv run scripts/convert_label_studio.py <export.json> <test_set>
+Converts a Label Studio JSON export into the benchmark's ground-truth format. It automatically reads your `config.yaml` to save the output in the correct directory.
 
-# Example:
+```bash
+uv run scripts/convert_label_studio.py <export.json> <test_set> [--config path/to/config.yaml]
+
+# Examples:
 uv run scripts/convert_label_studio.py project-1-at-2026-01-01.json test_1
+uv run scripts/convert_label_studio.py project-1-at-2026-01-01.json test_1 --config custom_config.yaml
 ```
 
 ---

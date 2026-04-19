@@ -25,3 +25,4 @@ ocr-core = { workspace = true }
 
 [tool.isort]
 profile = "black"
+known_first_party = ["ocr_core"]

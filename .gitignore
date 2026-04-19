@@ -240,7 +240,5 @@ tests/debug-unicode.ps1
 
 # Data
 data/
-!data/groundtruths/
-!data/inputs/
 models/huggingface_cache/
 results/

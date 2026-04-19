@@ -2,21 +2,20 @@
 Convert a Label Studio JSON export into benchmark ground-truth files.
 
 Usage:
-    python scripts/convert_label_studio.py <export.json> <test_set>
-
-Produces one .json per annotated image under:
-    data/groundtruths/<test_set>/
+    uv run scripts/convert_label_studio.py <export.json> <test_set>
+    uv run scripts/convert_label_studio.py <export.json> <test_set> \\
+        --config config/default.yaml
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import os
 import re
-import sys
 
-GT_BASE = os.path.join("data", "groundtruths")
+from ocr_core.config import load_config
 
 # Label Studio prefixes uploads with 8 hex chars + dash
 _LS_PREFIX_RE = re.compile(r"^[0-9a-f]{8}-")
@@ -173,23 +172,28 @@ def convert_task(task: dict) -> dict | None:
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python scripts/convert_label_studio.py <export.json> <test_set>")
-        print()
-        print("Example:")
-        print(
-            "  python scripts/convert_label_studio.py "
-            "project-1-at-2026-01-01.json test_1"
-        )
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Convert Label Studio export to OCR Benchmark ground truth.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument("export_json", help="Path to the Label Studio export JSON file")
+    parser.add_argument("test_set", help="Name of the test set (folder to output into)")
+    parser.add_argument(
+        "--config", default="config/default.yaml", help="Path to config YAML"
+    )
+    args = parser.parse_args()
 
-    export_path = sys.argv[1]
-    test_set = sys.argv[2]
+    # Load configuration
+    cfg = load_config(args.config)
 
-    with open(export_path, encoding="utf-8") as f:
+    # Resolve the ground truth directory relative to the repository root
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    gt_base = os.path.join(repo_root, cfg.data.groundtruth_dir)
+    output_dir = os.path.join(gt_base, args.test_set)
+
+    with open(args.export_json, encoding="utf-8") as f:
         tasks = json.load(f)
 
-    output_dir = os.path.join(GT_BASE, test_set)
     os.makedirs(output_dir, exist_ok=True)
 
     converted = 0
