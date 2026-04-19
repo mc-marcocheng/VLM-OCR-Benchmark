@@ -10,7 +10,6 @@ import os
 
 import gradio as gr
 import pandas as pd
-from loguru import logger
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 RESULTS_DIR = os.path.join(_ROOT, "results")
@@ -204,16 +203,22 @@ def load_explorer(ts, fname, model, device, page):
     regions_md = ""
     pred_regions = pm.get("predicted_regions", [])
     if pred_regions:
-        regions_md = "\n### 🗺️ Detected Regions\n\n| # | Category | Text (preview) | BBox |\n|---|----------|----------------|------|\n"
+        regions_md = (
+            "\n### 🗺️ Detected Regions\n\n"
+            "| # | Category | Text (preview) | BBox |\n"
+            "|---|----------|----------------|------|\n"
+        )
         for i, r in enumerate(pred_regions):
             cat = r.get("category", "?")
-            # Replace newlines with a visible marker or space to avoid breaking the table
+            # Replace newlines with a visible marker or space
             txt_raw = r.get("text", "").replace("\n", " ↵ ").replace("|", "\\|")
             txt = (txt_raw[:60] + "...") if len(txt_raw) > 60 else txt_raw
             # Format bbox nicely instead of raw dict
             bbox = r.get("bbox", {})
             if isinstance(bbox, dict):
-                bbox_str = f"({bbox.get('x1', 0):.0f}, {bbox.get('y1', 0):.0f}) → ({bbox.get('x2', 0):.0f}, {bbox.get('y2', 0):.0f})"
+                x1, y1 = bbox.get("x1", 0), bbox.get("y1", 0)
+                x2, y2 = bbox.get("x2", 0), bbox.get("y2", 0)
+                bbox_str = f"({x1:.0f}, {y1:.0f}) → ({x2:.0f}, {y2:.0f})"
             else:
                 bbox_str = str(bbox)
             regions_md += f"| {i+1} | {cat} | {txt} | {bbox_str} |\n"
@@ -225,11 +230,23 @@ def load_explorer(ts, fname, model, device, page):
     md = f"### 📋 Benchmark: {data.get('model_name', 'N/A')}\n\n"
     md += "| Metric | Mean | 95% CI |\n|--------|------|--------|\n"
     for name, s in summaries.items():
-        md += f"| **{name.upper()}** | {s['mean']:.4f} | [{s.get('ci_lower', 0):.4f}, {s.get('ci_upper', 0):.4f}] |\n"
+        mean = s["mean"]
+        ci_lower = s.get("ci_lower", 0)
+        ci_upper = s.get("ci_upper", 0)
+        md += (
+            f"| **{name.upper()}** | {mean:.4f} | [{ci_lower:.4f}, {ci_upper:.4f}] |\n"
+        )
     if timing:
-        md += f"| **Speed (s/page)** | {timing.get('mean_s_per_page', 0):.4f} | [{timing.get('ci_lower', 0):.4f}, {timing.get('ci_upper', 0):.4f}] |\n"
+        speed = timing.get("mean_s_per_page", 0)
+        ci_lower = timing.get("ci_lower", 0)
+        ci_upper = timing.get("ci_upper", 0)
+        md += (
+            f"| **Speed (s/page)** | {speed:.4f} | [{ci_lower:.4f}, {ci_upper:.4f}] |\n"
+        )
 
-    md += f"\n- Runs: {data.get('measured_runs', '?')} measured + {data.get('warmup_runs', 0)} warmup\n"
+    measured = data.get("measured_runs", "?")
+    warmup = data.get("warmup_runs", 0)
+    md += f"\n- Runs: {measured} measured + {warmup} warmup\n"
     md += f"- Pages: {data.get('total_pages_processed', '?')}\n"
     res = data.get("resources", {})
     md += f"- Peak RAM: {_fmt(res.get('peak_ram_mb'), '.0f', ' MB')}\n"
@@ -327,7 +344,8 @@ def load_compare(ts, fname, ma, da, mb, db):
 
 with gr.Blocks(title="OCR Benchmark Dashboard", theme=gr.themes.Soft()) as demo:
     gr.Markdown(
-        "# 🔍 OCR Benchmarking Dashboard\nEvaluate and compare OCR models with comprehensive metrics."
+        "# 🔍 OCR Benchmarking Dashboard\n"
+        "Evaluate and compare OCR models with comprehensive metrics."
     )
 
     with gr.Tab("📊 Summary"):

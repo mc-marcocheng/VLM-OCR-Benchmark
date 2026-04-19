@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Any
 
 import numpy as np
 from ocr_core.metrics.base import Metric, MetricResult

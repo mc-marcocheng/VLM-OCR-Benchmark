@@ -26,7 +26,7 @@ _REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", "..", ".."))
 CACHE_DIR = os.path.join(_REPO_ROOT, "models", "huggingface_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# Set environment variables BEFORE importing transformers to strictly enforce the cache location
+# Set environment variables BEFORE importing transformers
 os.environ["HF_HOME"] = CACHE_DIR
 os.environ["HF_HUB_CACHE"] = CACHE_DIR
 os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
@@ -102,7 +102,7 @@ class DotsMOCRModel:
             dtype = torch.float32
             attn_impl = "eager"
 
-        # Use AutoModelForCausalLM with trust_remote_code to load the custom dots_ocr model
+        # Use AutoModelForCausalLM with trust_remote_code
         self.model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
             torch_dtype=dtype,

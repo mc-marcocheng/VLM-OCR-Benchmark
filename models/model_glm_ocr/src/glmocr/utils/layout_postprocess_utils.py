@@ -30,7 +30,7 @@ def iou(box1, box2):
 
 
 def nms(boxes, iou_same=0.6, iou_diff=0.95):
-    """Perform Non-Maximum Suppression (NMS) with different IoU thresholds for same and different classes."""
+    """Perform NMS with different IoU thresholds for same and different classes."""
     # Extract class scores
     scores = boxes[:, 1]
 
@@ -83,7 +83,7 @@ def check_containment(boxes, preserve_indices=None, category_index=None, mode=No
 
     Args:
         boxes: Array of boxes
-        preserve_indices: Set of class indices to always preserve (e.g., image, seal, chart)
+        preserve_indices: Set of class indices to always preserve
         category_index: Category index for mode-specific filtering
         mode: Filtering mode ('large' or 'small')
     """
@@ -115,15 +115,14 @@ def check_containment(boxes, preserve_indices=None, category_index=None, mode=No
 
 
 def unclip_boxes(boxes, unclip_ratio=None):
-    """
-    Expand bounding boxes from (x1, y1, x2, y2) format using an unclipping ratio.
+    """Expand bounding boxes using an unclipping ratio.
 
     Parameters:
-    - boxes: np.ndarray of shape (N, 6+), where each row is (cls_id, score, x1, y1, x2, y2, ...).
-    - unclip_ratio: tuple of (width_ratio, height_ratio), or dict mapping cls_id to ratio, optional.
+    - boxes: np.ndarray of shape (N, 6+), each row is (cls_id, score, ...).
+    - unclip_ratio: tuple of (width_ratio, height_ratio), or dict.
 
     Returns:
-    - expanded_boxes: np.ndarray of shape (N, 6+), where each row is (cls_id, score, x1, y1, x2, y2, ...).
+    - expanded_boxes: np.ndarray of shape (N, 6+), each row is (cls_id, score, ...).
     """
     if unclip_ratio is None:
         return boxes
@@ -189,13 +188,12 @@ def apply_layout_postprocess(
     Apply layout post-processing to raw detection results.
 
     Args:
-        raw_results: List of dicts from transformers post_process_object_detection
-                    Each dict has keys: 'scores', 'labels', 'boxes', 'order_seq', 'polygon_points'
+        raw_results: List of dicts from transformers post_process_object_detection.
         id2label: Dict mapping class id to label name
         img_sizes: List of (width, height) tuples for each image
         layout_nms: Whether to apply NMS
         layout_unclip_ratio: Unclip ratio for box expansion
-        layout_merge_bboxes_mode: Mode for merging nested boxes ('union', 'large', 'small', or dict)
+        layout_merge_bboxes_mode: Mode for merging nested boxes
 
     Returns:
         List of lists, each containing dicts in PaddleOCR format:
@@ -274,11 +272,11 @@ def apply_layout_postprocess(
                     preserve_indices.add(all_labels.index(label))
 
             if isinstance(layout_merge_bboxes_mode, str):
-                assert layout_merge_bboxes_mode in [
-                    "union",
-                    "large",
-                    "small",
-                ], f"layout_merge_bboxes_mode must be one of ['union', 'large', 'small'], but got {layout_merge_bboxes_mode}"
+                valid_modes = ["union", "large", "small"]
+                assert layout_merge_bboxes_mode in valid_modes, (
+                    f"layout_merge_bboxes_mode must be one of {valid_modes}, "
+                    f"but got {layout_merge_bboxes_mode}"
+                )
 
                 if layout_merge_bboxes_mode == "union":
                     pass
@@ -296,11 +294,11 @@ def apply_layout_postprocess(
             elif isinstance(layout_merge_bboxes_mode, dict):
                 keep_mask = np.ones(len(boxes_array), dtype=bool)
                 for category_index, layout_mode in layout_merge_bboxes_mode.items():
-                    assert layout_mode in [
-                        "union",
-                        "large",
-                        "small",
-                    ], f"layout_mode must be one of ['union', 'large', 'small'], but got {layout_mode}"
+                    valid_modes = ["union", "large", "small"]
+                    assert layout_mode in valid_modes, (
+                        f"layout_mode must be one of {valid_modes}, "
+                        f"but got {layout_mode}"
+                    )
 
                     if layout_mode == "union":
                         pass
@@ -345,7 +343,8 @@ def apply_layout_postprocess(
                 pass
             else:
                 raise ValueError(
-                    f"layout_unclip_ratio must be float, tuple, or dict, but got {type(layout_unclip_ratio)}"
+                    f"layout_unclip_ratio must be float, tuple, or dict, "
+                    f"but got {type(layout_unclip_ratio)}"
                 )
             boxes_array = unclip_boxes(boxes_array, layout_unclip_ratio)
 

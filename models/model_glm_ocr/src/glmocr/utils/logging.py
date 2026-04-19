@@ -204,11 +204,12 @@ def ensure_logging_configured(
 ) -> None:
     """Ensure glmocr logging is configured from an external config.
 
-    If logging was only auto-configured (the implicit default triggered by get_logger()),
-    this will reconfigure it using the provided level/format.
+    If logging was only auto-configured (the implicit default triggered by
+    get_logger()), this will reconfigure it using the provided level/format.
 
-    This avoids the common pitfall where importing modules creates the logger and locks
-    logging into the default INFO level even when a config file specifies DEBUG.
+    This avoids the common pitfall where importing modules creates the logger
+    and locks logging into the default INFO level even when a config file
+    specifies DEBUG.
     """
     global _configured, _configured_source
 

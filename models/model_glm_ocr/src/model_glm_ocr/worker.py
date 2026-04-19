@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import time
 
 import psutil
@@ -96,8 +97,6 @@ def load_vlm(device: str):
 
 
 # ── Inference ────────────────────────────────────────────────
-
-import re
 
 # Regex to strip ```markdown ... ``` wrappers the model produces
 _MD_FENCE_RE = re.compile(

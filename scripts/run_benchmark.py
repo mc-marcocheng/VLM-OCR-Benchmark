@@ -4,8 +4,10 @@ CLI entry-point for running benchmarks.
 
 Usage:
     python scripts/run_benchmark.py --model GLMOCR --test_set test_1 --device cuda
-    python scripts/run_benchmark.py --model GLMOCR --test_set test_1 --config config/default.yaml
-    python scripts/run_benchmark.py --model GLMOCR --test_set test_1 --report results/report.md
+    python scripts/run_benchmark.py --model GLMOCR --test_set test_1 \\
+        --config config/default.yaml
+    python scripts/run_benchmark.py --model GLMOCR --test_set test_1 \\
+        --report results/report.md
 """
 
 import argparse

@@ -18,3 +18,11 @@ repos:
     hooks:
       - id: isort
         additional_dependencies: [isort]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args:
+          - --max-line-length=88
+          - --extend-ignore=D,E203,E402

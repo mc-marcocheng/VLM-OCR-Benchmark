@@ -22,17 +22,18 @@ except Exception as e:  # pragma: no cover
 
 
 def _raise_layout_import_error() -> None:
+    err_name = type(_layout_import_error).__name__
+    err_msg = str(_layout_import_error)
+
     if _layout_import_error_is_dependency:
         message = (
-            "Layout detector dependencies are missing or incompatible. "
-            "Try: pip install 'glmocr[layout]'. "
-            f"Original error: {type(_layout_import_error).__name__}: {_layout_import_error}"
+            f"Layout detector dependencies missing. Try: pip install 'glmocr[layout]'. "
+            f"Original error: {err_name}: {err_msg}"
         )
     else:
         message = (
-            "Layout detector failed to import (dependencies may already be installed). "
-            "See the original error for the real cause. "
-            f"Original error: {type(_layout_import_error).__name__}: {_layout_import_error}"
+            "Layout detector failed to import. "
+            f"Original error: {err_name}: {err_msg}"
         )
 
     raise ImportError(message) from _layout_import_error

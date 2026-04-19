@@ -12,7 +12,7 @@ import numpy as np
 from loguru import logger
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline
-from ocr_core.types import BBox, OCRPage, OCRRegion
+from ocr_core.types import BBox, OCRPage
 
 
 def _iou_matrix(gt: Sequence[BBox], pred: Sequence[BBox]) -> np.ndarray:

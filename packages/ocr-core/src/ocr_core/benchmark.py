@@ -22,7 +22,7 @@ from loguru import logger
 from ocr_core.config import BenchmarkConfig, load_config
 from ocr_core.data_loader import DataLoader
 from ocr_core.degradation import DegradationPipeline
-from ocr_core.metrics import MetricRegistry, MetricResult
+from ocr_core.metrics import MetricRegistry
 from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.statistics import SummaryStats, paired_bootstrap_test, summarise
 from ocr_core.types import GroundTruth, OCRPage, WorkerResponse, WorkerTask
@@ -319,7 +319,8 @@ class BenchmarkRunner:
                                 scores.update(mr.scores)
                             except Exception:
                                 logger.exception(
-                                    f"Metric {metric.name} failed on {fname} p{page_idx+1}"
+                                    f"Metric {metric.name} failed on {fname}, "
+                                    f"page {page_idx+1}"
                                 )
 
                 page_results.append(
@@ -552,7 +553,8 @@ class BenchmarkRunner:
 
         json_path = os.path.join(
             out_dir,
-            f"{safe_filename(result.model_name)}_{safe_filename(result.device)}_results.json",
+            f"{safe_filename(result.model_name)}_"
+            f"{safe_filename(result.device)}_results.json",
         )
         fd, tmp = tempfile.mkstemp(dir=out_dir, suffix=".json")
         try:

@@ -237,7 +237,6 @@ teams/
 cache/
 tests/last-results.xml
 tests/debug-unicode.ps1
-.claude/
 
 # Data
 data/

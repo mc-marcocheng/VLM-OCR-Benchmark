@@ -115,7 +115,7 @@ class MaaSApiConfig(_BaseConfig):
     """
 
     # Enable MaaS mode (passthrough to Zhipu cloud API)
-    # Default: True — MaaS is the default mode after `pip install glmocr` (no GPU needed)
+    # Default: True — MaaS is the default mode after `pip install glmocr`
     enabled: bool = True
 
     # API endpoint (default: Zhipu GLM-OCR layout_parsing API)

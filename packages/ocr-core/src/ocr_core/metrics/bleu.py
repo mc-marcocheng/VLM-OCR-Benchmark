@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from typing import Sequence
 
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline

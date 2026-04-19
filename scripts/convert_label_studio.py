@@ -178,7 +178,8 @@ def main():
         print()
         print("Example:")
         print(
-            "  python scripts/convert_label_studio.py project-1-at-2026-04-19.json test_1"
+            "  python scripts/convert_label_studio.py "
+            "project-1-at-2026-01-01.json test_1"
         )
         sys.exit(1)
 
