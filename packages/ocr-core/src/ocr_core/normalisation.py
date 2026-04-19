@@ -12,6 +12,7 @@ import unicodedata
 from typing import Optional
 
 from loguru import logger
+
 from ocr_core.config import NormalisationConfig
 
 __all__ = ["NormalisationPipeline"]

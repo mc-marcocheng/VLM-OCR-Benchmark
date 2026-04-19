@@ -24,12 +24,31 @@ def safe_filename(s: str) -> str:
     return re.sub(r"[^\w\-.]", "_", s)
 
 
-def get_vram_usage_mb() -> Optional[float]:
+def _get_device_id() -> int:
+    """Attempt to resolve the active GPU device index for accurate VRAM polling."""
     try:
         import torch
 
         if torch.cuda.is_available():
-            return torch.cuda.memory_allocated(0) / (1024**2)
+            return torch.cuda.current_device()
+    except Exception:
+        pass
+    cvd = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if cvd:
+        try:
+            return int(cvd.split(",")[0])
+        except ValueError:
+            pass
+    return 0
+
+
+def get_vram_usage_mb() -> Optional[float]:
+    device_id = _get_device_id()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return torch.cuda.memory_allocated(device_id) / (1024**2)
     except Exception:
         pass
     try:
@@ -41,7 +60,7 @@ def get_vram_usage_mb() -> Optional[float]:
         )
 
         nvmlInit()
-        h = nvmlDeviceGetHandleByIndex(0)
+        h = nvmlDeviceGetHandleByIndex(device_id)
         pid = os.getpid()
         for p in nvmlDeviceGetComputeRunningProcesses(h):
             if p.pid == pid:
@@ -54,22 +73,24 @@ def get_vram_usage_mb() -> Optional[float]:
 
 
 def get_peak_vram_mb() -> Optional[float]:
+    device_id = _get_device_id()
     try:
         import torch
 
         if torch.cuda.is_available():
-            return torch.cuda.max_memory_allocated(0) / (1024**2)
+            return torch.cuda.max_memory_allocated(device_id) / (1024**2)
     except Exception:
         pass
     return None
 
 
 def reset_peak_vram() -> None:
+    device_id = _get_device_id()
     try:
         import torch
 
         if torch.cuda.is_available():
-            torch.cuda.reset_peak_memory_stats(0)
+            torch.cuda.reset_peak_memory_stats(device_id)
     except Exception:
         pass
 

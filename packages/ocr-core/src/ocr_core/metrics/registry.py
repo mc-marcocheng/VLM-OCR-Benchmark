@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from loguru import logger
+
 from ocr_core.config import MetricConfig
 from ocr_core.metrics.bag_of_words import BagOfWordsMetric
 from ocr_core.metrics.base import Metric

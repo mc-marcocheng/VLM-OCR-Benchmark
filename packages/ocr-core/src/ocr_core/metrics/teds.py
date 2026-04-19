@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
 import numpy as np
+
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.metrics.layout_iou import _hungarian_match
 from ocr_core.normalisation import NormalisationPipeline
@@ -57,8 +58,16 @@ class _TableParser(HTMLParser):
         node = TreeNode(tag=tag)
         if self._stack:
             self._stack[-1].children.append(node)
-        else:
+        elif self.root is None:
             self.root = node
+        else:
+            # Document has multiple roots. Create a dummy wrapping root.
+            dummy = TreeNode(tag="root")
+            dummy.children.extend([self.root, node])
+            self.root = dummy
+            self._stack.append(dummy)
+
+        self._stack.append(node)
 
     def handle_data(self, data: str):
         text = data.strip()

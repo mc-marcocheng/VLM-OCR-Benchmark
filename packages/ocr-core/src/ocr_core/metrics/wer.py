@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from jiwer import process_words
+
 from ocr_core.metrics.base import Metric, MetricResult
 from ocr_core.normalisation import NormalisationPipeline
 from ocr_core.types import OCRPage

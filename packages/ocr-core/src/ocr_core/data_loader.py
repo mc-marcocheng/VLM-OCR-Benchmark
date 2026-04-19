@@ -14,8 +14,9 @@ import shutil
 import fitz  # PyMuPDF
 import pillow_heif
 from loguru import logger
-from ocr_core.types import GroundTruth, OCRPage
 from PIL import Image
+
+from ocr_core.types import GroundTruth, OCRPage
 
 pillow_heif.register_heif_opener()
 

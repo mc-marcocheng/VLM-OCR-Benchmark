@@ -8,8 +8,9 @@ or they can simply produce the correct JSON output without importing it.
 from abc import ABC, abstractmethod
 
 import psutil
-from ocr_core.types import OCRPage
 from PIL import Image
+
+from ocr_core.types import OCRPage
 
 __all__ = ["AbstractOCRModel"]
 
