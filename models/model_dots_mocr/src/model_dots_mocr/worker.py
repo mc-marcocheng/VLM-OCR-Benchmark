@@ -32,6 +32,9 @@ os.environ["HF_HUB_CACHE"] = CACHE_DIR
 os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 # ─────────────────────────────────────────────────────────────
 
+from qwen_vl_utils import process_vision_info
+from transformers import AutoModelForCausalLM, AutoProcessor
+
 from model_dots_mocr.utils import (
     MAX_PIXELS,
     MIN_PIXELS,
@@ -40,8 +43,6 @@ from model_dots_mocr.utils import (
 )
 from ocr_core.types import BBox, OCRPage, OCRRegion, WorkerPageResult, WorkerTask
 from ocr_core.utils import get_peak_vram_mb, get_vram_usage_mb, reset_peak_vram
-from qwen_vl_utils import process_vision_info
-from transformers import AutoModelForCausalLM, AutoProcessor
 
 MODEL_ID = "rednote-hilab/dots.mocr"
 
