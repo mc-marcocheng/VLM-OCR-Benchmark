@@ -153,7 +153,9 @@ class Dashboard:
         """Numeric columns suitable for charting (exclude CI bounds)."""
         if df.empty:
             return []
-        return [c for c in df.select_dtypes(include="number").columns if "CI" not in c]
+        cols = [c for c in df.select_dtypes(include="number").columns if "CI" not in c]
+        cols = [c for c in cols if c not in ("Runs", "Pages")]
+        return cols
 
     def _apply_categorical_filters(self, df, models, test_sets, devices):
         if models:
@@ -191,7 +193,7 @@ class Dashboard:
             f"**{n_devices}** devices"
         )
 
-    def _make_chart(self, df, metric):
+    def _make_bar_chart(self, df, metric):
         """Bar chart comparing models on *metric*."""
         if df.empty or not metric or metric not in df.columns:
             return None
@@ -221,6 +223,40 @@ class Dashboard:
         )
         return fig
 
+    def _make_heatmap(self, df, metric):
+        """Model × Test Set heatmap for a single metric."""
+        if df.empty or metric not in df.columns:
+            return None
+        pivot = df.pivot_table(
+            index="Model", columns="Test Set", values=metric, aggfunc="mean"
+        )
+        fig = px.imshow(
+            pivot,
+            text_auto=".3f",
+            aspect="auto",
+            title=f"{metric} — Model × Test Set",
+            color_continuous_scale="RdYlGn",
+        )
+        fig.update_layout(height=400)
+        return fig
+
+    def _make_timing_distribution(self, df):
+        """Box plot of per-page timing across models."""
+        time_col = next(
+            (c for c in df.columns if "time" in c.lower() or "speed" in c.lower()),
+            None,
+        )
+        if not time_col:
+            return None
+        return px.box(
+            df,
+            x="Model",
+            y=time_col,
+            color="Device",
+            title="Timing Distribution by Model",
+            points="outliers",
+        )
+
     def refresh_summary(self):
         """Reload CSV, populate filter choices, return initial stats + chart + table."""
         df = self._load_summary_raw()
@@ -248,7 +284,7 @@ class Dashboard:
 
         first_metric = metric_cols[0] if metric_cols else None
         stats = self._make_stats_md(df, df)
-        chart = self._make_chart(df, first_metric)
+        chart = self._make_bar_chart(df, first_metric)
 
         return (
             gr.update(choices=models, value=[]),
@@ -263,27 +299,35 @@ class Dashboard:
         )
 
     def filter_and_visualize(
-        self, models, test_sets, devices, sort_by, order, visible_cols, chart_metric
+        self,
+        models,
+        test_sets,
+        devices,
+        sort_by,
+        order,
+        visible_cols,
+        chart_metric,
+        chart_type,
     ):
-        """Apply filters → return (stats_md, dataframe, chart)."""
         df_total = self._load_summary_raw()
         if df_total.empty:
             return "📈 No data loaded", pd.DataFrame(), None
 
         df = self._apply_categorical_filters(df_total, models, test_sets, devices)
-
-        # Stats (before sort / column trimming)
         stats = self._make_stats_md(df, df_total)
 
-        # Chart (uses all columns, unsorted)
-        chart = self._make_chart(df, chart_metric)
+        # Dispatch chart type
+        if chart_type == "Heatmap":
+            chart = self._make_heatmap(df, chart_metric)
+        elif chart_type == "Timing Box":
+            chart = self._make_timing_distribution(df)
+        else:
+            chart = self._make_bar_chart(df, chart_metric)
 
-        # Sort
+        # Sort + column trimming (unchanged)
         ascending = order == "Ascending"
         if sort_by and sort_by in df.columns:
             df = df.sort_values(by=sort_by, ascending=ascending, na_position="last")
-
-        # Column visibility
         if visible_cols:
             keep = list(dict.fromkeys(self._KEY_COLS + list(visible_cols)))
             keep = [c for c in keep if c in df.columns]
@@ -603,6 +647,12 @@ class Dashboard:
                         choices=[],
                         interactive=True,
                     )
+                    s_chart_type = gr.Radio(
+                        label="Chart Type",
+                        choices=["Bar", "Heatmap", "Timing Box"],
+                        value="Bar",
+                        interactive=True,
+                    )
                 with gr.Accordion("Column Visibility", open=False):
                     s_cols = gr.CheckboxGroup(
                         label="Visible columns",
@@ -644,6 +694,7 @@ class Dashboard:
                     s_asc,
                     s_cols,
                     s_metric_plot,
+                    s_chart_type,
                 ]
                 _filter_outs = [s_stats, summary_df, s_chart]
 
@@ -660,6 +711,7 @@ class Dashboard:
                     s_asc,
                     s_cols,
                     s_metric_plot,
+                    s_chart_type,
                 ]:
                     comp.change(
                         fn=self.filter_and_visualize,
