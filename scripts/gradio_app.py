@@ -328,7 +328,7 @@ class Dashboard:
         return pa, ia, pb, ib
 
     def build_ui(self) -> gr.Blocks:
-        with gr.Blocks(title="OCR Benchmark Dashboard", theme=gr.themes.Soft()) as demo:
+        with gr.Blocks(title="OCR Benchmark Dashboard") as demo:
             gr.Markdown(
                 "# 🔍 OCR Benchmarking Dashboard\n"
                 "Evaluate and compare OCR models with comprehensive metrics."
@@ -487,7 +487,12 @@ def main():
     app = dashboard.build_ui()
 
     # Launch
-    app.launch(server_name=args.host, server_port=args.port, share=args.share)
+    app.launch(
+        theme=gr.themes.Soft(),
+        server_name=args.host,
+        server_port=args.port,
+        share=args.share,
+    )
 
 
 if __name__ == "__main__":

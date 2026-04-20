@@ -98,6 +98,11 @@ models:
     module: "model_infinity_parser2.worker"
     project_dir: "models/model_infinity_parser2"
     params: {}
+  ChandraOCR:
+    module: "model_chandra_ocr.worker"
+    project_dir: "models/model_chandra_ocr"
+    params:
+      model_id: datalab-to/chandra
   ChandraOCR2:
     module: "model_chandra_ocr.worker"
     project_dir: "models/model_chandra_ocr"
