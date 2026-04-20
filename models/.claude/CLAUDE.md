@@ -56,7 +56,7 @@ It communicates purely via JSON files using types defined in `ocr_core.types`.
 ## 4. Worker Boilerplate
 Use the canonical types and VRAM helpers provided by `ocr-core`.
 
-**Important:** The cache environment variables (`HF_HOME`, `HF_HUB_CACHE`, `TRANSFORMERS_CACHE`) *must* be set before importing `transformers` or `torch`.
+**Important:** The cache environment variables (`HF_HOME`, `HF_HUB_CACHE`) *must* be set before importing `transformers` or `torch`.
 
 ```python
 import argparse
@@ -121,7 +121,7 @@ def main():
 
         # TODO: Run inference
         # result_page = OCRPage(full_text="Extracted text...", regions=[])
-        result_page = OCRPage(full_text="")
+        result_page = OCRPage(full_text="", regions=[])
 
         pred_time = time.perf_counter() - t_start
         pages.append(WorkerPageResult(
@@ -151,4 +151,48 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+## Common Pitfalls
+
+### 1. `OCRPage.regions` must NEVER be `None`
+
+`OCRPage.to_dict()` iterates over `self.regions`. If you pass `regions=None`,
+serialisation will crash with:
+
+```
+TypeError: 'NoneType' object is not iterable
+```
+
+**Always use an empty list:**
+
+```python
+# ✅ Correct
+OCRPage(full_text="...", regions=[])
+
+# ✅ Correct — conditional that preserves empty list
+regions = extract_regions(...)  # may return []
+OCRPage(full_text="...", regions=regions)
+
+# ❌ WRONG — falsy empty list becomes None
+OCRPage(full_text="...", regions=regions if regions else None)
+
+# ❌ WRONG — default OCRPage() has regions=None
+OCRPage()
+```
+
+This applies to **both** the success path and the error/exception handler:
+
+```python
+# Success path
+ocr_page = parse_output(raw, w, h)  # must return regions=[]
+
+# Error path
+pages.append(
+    WorkerPageResult(
+        image_path=img_path,
+        error=str(e),
+        result=OCRPage(regions=[]),  # NOT OCRPage()
+    ).to_dict()
+)
 ```

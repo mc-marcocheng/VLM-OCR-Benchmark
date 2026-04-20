@@ -80,3 +80,7 @@ models:
     params:
       model_id: "nanonets/Nanonets-OCR2-1.5B-exp"
       max_new_tokens: 15000
+  OlmOCR2:
+    project_dir: "models/model_olmocr"
+    module: "model_olmocr.worker"
+    params: {}
