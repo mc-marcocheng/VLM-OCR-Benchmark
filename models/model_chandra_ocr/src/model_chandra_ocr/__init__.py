@@ -1,0 +1,1 @@
+"""Chandra OCR model worker."""
