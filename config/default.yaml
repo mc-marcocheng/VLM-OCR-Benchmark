@@ -84,3 +84,13 @@ models:
     project_dir: "models/model_olmocr"
     module: "model_olmocr.worker"
     params: {}
+  MonkeyOCR-1.2B:
+    project_dir: "models/model_monkey_ocr"
+    module: "model_monkey_ocr.worker"
+    params:
+      model_id: "echo840/MonkeyOCR-pro-1.2B"
+  MonkeyOCR-3B:
+    project_dir: "models/model_monkey_ocr"
+    module: "model_monkey_ocr.worker"
+    params:
+      model_id: "echo840/MonkeyOCR-pro-3B"

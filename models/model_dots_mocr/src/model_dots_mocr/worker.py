@@ -29,7 +29,6 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 # Set environment variables BEFORE importing transformers
 os.environ["HF_HOME"] = CACHE_DIR
 os.environ["HF_HUB_CACHE"] = CACHE_DIR
-os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 # ─────────────────────────────────────────────────────────────
 
 from qwen_vl_utils import process_vision_info
@@ -439,7 +438,7 @@ def main():
                 WorkerPageResult(
                     image_path=img_path,
                     error=str(e),
-                    result=OCRPage(),
+                    result=OCRPage(regions=[]),
                 ).to_dict()
             )
 

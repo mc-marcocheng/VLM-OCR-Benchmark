@@ -103,7 +103,7 @@ def resolve_device(requested: str) -> str:
 
             if torch.cuda.is_available():
                 return "cuda"
-        except ImportError:
+        except (ImportError, AttributeError):
             pass
         logger.warning("CUDA not available — falling back to CPU")
         return "cpu"
