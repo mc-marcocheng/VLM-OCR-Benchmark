@@ -90,6 +90,25 @@ class TestBBox:
         assert hash(b1) == hash(b2)
         assert {b1, b2} == {b1}
 
+    def test_from_dict_list_format(self):
+        bbox = BBox.from_dict([10, 20, 100, 200])
+        assert bbox.x1 == 10
+        assert bbox.y1 == 20
+        assert bbox.x2 == 100
+        assert bbox.y2 == 200
+
+    def test_from_dict_list_short(self):
+        with pytest.raises(ValueError, match="requires 4 values"):
+            BBox.from_dict([10, 20, 100])
+
+    def test_from_dict_tuple_format(self):
+        bbox = BBox.from_dict((10, 20, 100, 200))
+        assert bbox.x1 == 10
+
+    def test_iou_complete_overlap(self):
+        b1 = BBox(0, 0, 10, 10)
+        assert b1.iou(b1) == 1.0
+
 
 # ═══════════════════════════════════════════════════════════════
 #  OCRRegion
@@ -137,6 +156,35 @@ class TestOCRRegion:
         d = r.to_dict()
         assert "bbox" not in d
         assert "children" not in d
+
+    def test_from_dict_with_children(self):
+        data = {
+            "text": "Parent",
+            "category": "text",
+            "children": [
+                {"text": "Child1", "category": "text"},
+                {"text": "Child2", "category": "text"},
+            ],
+        }
+        region = OCRRegion.from_dict(data)
+        assert len(region.children) == 2
+        assert region.children[0].text == "Child1"
+
+    def test_to_dict_with_bbox(self):
+        region = OCRRegion(
+            text="Test",
+            bbox=BBox(0, 0, 100, 50),
+        )
+        d = region.to_dict()
+        assert "bbox" in d
+        assert d["bbox"]["x1"] == 0
+
+    def test_to_dict_with_children(self):
+        child = OCRRegion(text="Child")
+        parent = OCRRegion(text="Parent", children=[child])
+        d = parent.to_dict()
+        assert "children" in d
+        assert len(d["children"]) == 1
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -191,6 +239,40 @@ class TestOCRPage:
         p = OCRPage.from_dict({"page": 5, "full_text": "hi"})
         assert p.page_number == 5
 
+    def test_from_dict_with_page_alias(self):
+        """Test that 'page' is accepted as alias for 'page_number'."""
+        data = {"page": 5, "full_text": "Test"}
+        page = OCRPage.from_dict(data)
+        assert page.page_number == 5
+
+    def test_regions_by_category_multiple(self):
+        page = OCRPage(
+            regions=[
+                OCRRegion(category="text"),
+                OCRRegion(category="title"),
+                OCRRegion(category="table"),
+                OCRRegion(category="text"),
+            ]
+        )
+        text_regions = page.regions_by_category("text", "title")
+        assert len(text_regions) == 3
+
+    def test_has_bboxes_false(self):
+        page = OCRPage(
+            regions=[
+                OCRRegion(text="No bbox"),
+            ]
+        )
+        assert not page.has_bboxes()
+
+    def test_has_bboxes_true(self):
+        page = OCRPage(
+            regions=[
+                OCRRegion(text="With bbox", bbox=BBox(0, 0, 10, 10)),
+            ]
+        )
+        assert page.has_bboxes()
+
 
 # ═══════════════════════════════════════════════════════════════
 #  GroundTruth
@@ -225,6 +307,30 @@ class TestGroundTruth:
         gt = GroundTruth.from_dict({"file": "x.pdf", "pages": []})
         assert gt.source_file == "x.pdf"
 
+    def test_full_text_property(self):
+        gt = GroundTruth(
+            pages=[
+                OCRPage(full_text="Page 1"),
+                OCRPage(full_text="Page 2"),
+            ]
+        )
+        assert gt.full_text == "Page 1\n\nPage 2"
+
+    def test_from_dict_with_file_alias(self):
+        """Test that 'file' is accepted as alias for 'source_file'."""
+        data = {"file": "test.pdf", "pages": []}
+        gt = GroundTruth.from_dict(data)
+        assert gt.source_file == "test.pdf"
+
+    def test_to_dict(self):
+        gt = GroundTruth(
+            source_file="test.pdf",
+            pages=[OCRPage(page_number=1, full_text="Content")],
+        )
+        d = gt.to_dict()
+        assert d["source_file"] == "test.pdf"
+        assert len(d["pages"]) == 1
+
 
 # ═══════════════════════════════════════════════════════════════
 #  Worker protocol types
@@ -246,6 +352,18 @@ class TestWorkerTask:
         t = WorkerTask.from_dict({})
         assert t.image_paths == []
         assert t.device == "cpu"
+
+    def test_worker_task_round_trip(self):
+        task = WorkerTask(
+            image_paths=["/path/to/image.png"],
+            device="cuda",
+            params={"max_tokens": 1000},
+        )
+        d = task.to_dict()
+        restored = WorkerTask.from_dict(d)
+        assert restored.image_paths == task.image_paths
+        assert restored.device == task.device
+        assert restored.params == task.params
 
 
 class TestWorkerPageResult:
@@ -269,6 +387,19 @@ class TestWorkerPageResult:
         assert d["error"] == "OOM"
         restored = WorkerPageResult.from_dict(d)
         assert restored.error == "OOM"
+
+    def test_worker_page_result_with_error(self):
+        result = WorkerPageResult(
+            image_path="/path/image.png",
+            error="Model failed",
+        )
+        d = result.to_dict()
+        assert d["error"] == "Model failed"
+
+    def test_worker_page_result_no_error(self):
+        result = WorkerPageResult(image_path="/path/image.png")
+        d = result.to_dict()
+        assert "error" not in d
 
 
 class TestWorkerResponse:
@@ -300,3 +431,26 @@ class TestWorkerResponse:
         assert resp.model_load_time_seconds == 0.0
         assert resp.vram_before_load_mb is None
         assert resp.pages == []
+
+    def test_worker_response_round_trip(self):
+        response = WorkerResponse(
+            model_load_time_seconds=1.5,
+            ram_before_load_mb=1000,
+            ram_after_load_mb=2000,
+            peak_ram_mb=2500,
+            vram_before_load_mb=100,
+            vram_after_load_mb=500,
+            peak_vram_mb=800,
+            pages=[
+                WorkerPageResult(
+                    image_path="/path/image.png",
+                    prediction_time_seconds=0.5,
+                    result=OCRPage(full_text="Hello"),
+                )
+            ],
+        )
+        d = response.to_dict()
+        restored = WorkerResponse.from_dict(d)
+        assert restored.model_load_time_seconds == 1.5
+        assert len(restored.pages) == 1
+        assert restored.pages[0].result.full_text == "Hello"

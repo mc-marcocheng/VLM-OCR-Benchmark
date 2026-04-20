@@ -20,16 +20,18 @@ __all__ = ["NormalisationPipeline"]
 # ── CJK detection ───────────────────────────────────────────
 
 _CJK_RANGES = (
-    "\u4e00-\u9fff"
-    "\u3400-\u4dbf"
-    "\U00020000-\U0002a6df"
-    "\U0002a700-\U0002b73f"
-    "\U0002b740-\U0002b81f"
-    "\U0002b820-\U0002ceaf"
-    "\U0002ceb0-\U0002ebef"
-    "\U00030000-\U0003134f"
-    "\u3000-\u303f"
-    "\uff00-\uffef"
+    "\u4e00-\u9fff"  # CJK Unified Ideographs
+    "\u3400-\u4dbf"  # CJK Extension A
+    "\U00020000-\U0002a6df"  # CJK Extension B
+    "\U0002a700-\U0002b73f"  # CJK Extension C
+    "\U0002b740-\U0002b81f"  # CJK Extension D
+    "\U0002b820-\U0002ceaf"  # CJK Extension E
+    "\U0002ceb0-\U0002ebef"  # CJK Extension F
+    "\U00030000-\U0003134f"  # CJK Extension G
+    "\u3000-\u303f"  # CJK Symbols and Punctuation
+    "\uff00-\uffef"  # Halfwidth and Fullwidth Forms
+    "\u3040-\u309f"  # Hiragana
+    "\u30a0-\u30ff"  # Katakana
 )
 _CJK_RE = re.compile(f"([{_CJK_RANGES}])")
 

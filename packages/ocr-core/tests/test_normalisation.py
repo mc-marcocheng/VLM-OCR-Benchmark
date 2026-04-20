@@ -28,6 +28,10 @@ class TestBasicNormalisation:
         n = NormalisationPipeline(NormalisationConfig(collapse_whitespace=True))
         assert n.apply("hello   world\t\nfoo") == "hello world foo"
 
+    def test_collapse_whitespace_newlines(self):
+        n = NormalisationPipeline(NormalisationConfig(collapse_whitespace=True))
+        assert n.apply("a\n\n\nb") == "a b"
+
     def test_no_collapse_whitespace(self):
         n = NormalisationPipeline(
             NormalisationConfig(collapse_whitespace=False, strip_whitespace=False)
@@ -47,11 +51,21 @@ class TestBasicNormalisation:
         n = NormalisationPipeline(NormalisationConfig(remove_punctuation=True))
         assert n.apply("Hello, world! How's it?") == "Hello world Hows it"
 
+    def test_remove_punctuation_ellipsis(self):
+        n = NormalisationPipeline(NormalisationConfig(remove_punctuation=True))
+        assert n.apply("Test... done?") == "Test done"
+
     def test_no_remove_punctuation(self):
         n = NormalisationPipeline(NormalisationConfig(remove_punctuation=False))
         result = n.apply("Hello, world!")
         assert "," in result
         assert "!" in result
+
+    def test_custom_replacements(self):
+        n = NormalisationPipeline(
+            NormalisationConfig(custom_replacements={"foo": "bar", "hello": "world"})
+        )
+        assert n.apply("foo says hello") == "bar says world"
 
 
 class TestUnicodeNormalisation:
@@ -113,10 +127,31 @@ class TestCJK:
         assert NormalisationPipeline.has_cjk("hello 世界")
         assert not NormalisationPipeline.has_cjk("hello world")
 
+    def test_has_cjk_chinese(self):
+        assert NormalisationPipeline.has_cjk("你好")
+
+    def test_has_cjk_japanese(self):
+        assert NormalisationPipeline.has_cjk("こんにちは")
+
+    def test_has_cjk_mixed(self):
+        assert NormalisationPipeline.has_cjk("Hello 世界")
+
+    def test_has_cjk_english_only(self):
+        assert not NormalisationPipeline.has_cjk("Hello World")
+
+    def test_has_cjk_empty(self):
+        assert not NormalisationPipeline.has_cjk("")
+
     def test_tokenise_for_wer_cjk(self, default_normaliser):
         result = default_normaliser.tokenise_for_wer("你好世界")
         # Each CJK character should become a separate word
         assert result == "你 好 世 界"
+
+    def test_tokenise_for_wer_cjk_word_count(self):
+        pipeline = NormalisationPipeline()
+        result = pipeline.tokenise_for_wer("你好世界")
+        words = result.split()
+        assert len(words) == 4
 
     def test_tokenise_for_wer_mixed(self, default_normaliser):
         result = default_normaliser.tokenise_for_wer("Hello 世界 World")
@@ -124,6 +159,13 @@ class TestCJK:
         assert "World" in result
         assert "世" in result
         assert "界" in result
+
+    def test_tokenise_for_wer_mixed_word_check(self):
+        pipeline = NormalisationPipeline()
+        result = pipeline.tokenise_for_wer("Hello 世界 World")
+        words = result.split()
+        assert "世" in words
+        assert "界" in words
 
     def test_tokenise_for_wer_latin_only(self, default_normaliser):
         result = default_normaliser.tokenise_for_wer("hello world")
@@ -154,3 +196,36 @@ class TestCombinedSteps:
         )
         result = n.apply("  Ｈello, World!  @home  ")
         assert result == "hello world athome"
+
+    def test_fullwidth_to_halfwidth(self):
+        n = NormalisationPipeline(NormalisationConfig(fullwidth_to_halfwidth=True))
+        # Fullwidth A is \uff21
+        assert n.apply("\uff21\uff22\uff23") == "ABC"
+        # Ideographic space
+        assert n.apply("A\u3000B") == "A B"
+
+    def test_unicode_normalisation_nfc(self):
+        n = NormalisationPipeline(NormalisationConfig(unicode_form="NFC"))
+        # é can be composed or decomposed
+        result = n.apply("café")
+        assert "é" in result or "e" in result
+
+    def test_empty_unicode_form(self):
+        n = NormalisationPipeline(NormalisationConfig(unicode_form=""))
+        # Should not raise
+        result = n.apply("test")
+        assert result == "test"
+
+    def test_callable_interface(self):
+        n = NormalisationPipeline()
+        result = n("  hello  world  ")
+        assert result == "hello world"
+
+
+class TestTraditionalToSimplified:
+    def test_t2s_without_opencc(self):
+        """Test that t2s gracefully handles missing opencc."""
+        n = NormalisationPipeline(NormalisationConfig(traditional_to_simplified=True))
+        # Should not raise, even if opencc is not installed
+        result = n.apply("測試")
+        assert isinstance(result, str)

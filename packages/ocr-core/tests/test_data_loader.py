@@ -234,3 +234,32 @@ class TestLoadGroundTruth:
         assert gt is not None
         assert len(gt.pages) == 1
         assert gt.pages[0].full_text == ""
+
+    def test_load_txt_gt_with_page_breaks(self, loader, data_dirs):
+        set_dir = os.path.join(data_dirs[1], "test_set")
+        os.makedirs(set_dir)
+
+        gt_content = (
+            "Page 1 content[PAGE_BREAK]Page 2 content[PAGE_BREAK]Page 3 content"
+        )
+        with open(os.path.join(set_dir, "doc.txt"), "w") as f:
+            f.write(gt_content)
+
+        gt = loader.load_ground_truth("test_set", "doc.pdf")
+        assert gt is not None
+        assert len(gt.pages) == 3
+        assert gt.pages[0].full_text == "Page 1 content"
+        assert gt.pages[1].full_text == "Page 2 content"
+        assert gt.pages[2].full_text == "Page 3 content"
+
+    def test_load_json_gt_invalid_structure(self, loader, data_dirs):
+        set_dir = os.path.join(data_dirs[1], "test_set")
+        os.makedirs(set_dir)
+
+        # Valid JSON but invalid structure for GroundTruth
+        with open(os.path.join(set_dir, "doc.json"), "w") as f:
+            json.dump({"pages": [{"invalid_field": "value"}]}, f)
+
+        gt = loader.load_ground_truth("test_set", "doc.pdf")
+        # Should still work due to defaults in from_dict
+        assert gt is not None
