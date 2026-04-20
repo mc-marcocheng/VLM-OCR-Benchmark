@@ -17,7 +17,11 @@ uv sync --extra dev
 
 # Setup pre-commit hooks
 uv run pre-commit install
+
+# Run the test suite
+uv run --package ocr-core pytest --cov --cov-report=term-missing
 ```
+
 Code formatting relies on `black` and `isort`. Ensure your editor is configured to use them, or rely on `pre-commit` to format files before commit.
 
 ---
@@ -264,6 +268,33 @@ metrics:
   # ... existing metrics
   - name: my_metric
     params: {}
+```
+
+### 4. Write Tests
+Add a test file at `packages/ocr-core/tests/metrics/test_my_metric.py`:
+
+```python
+from ocr_core.metrics.my_metric import MyMetric
+from ocr_core.types import OCRPage
+
+class TestMyMetric:
+    def setup_method(self):
+        self.metric = MyMetric()
+
+    def test_perfect_match(self, default_normaliser):
+        gt = OCRPage(full_text="hello world")
+        pred = OCRPage(full_text="hello world")
+        result = self.metric.compute(gt, pred, default_normaliser)
+        assert result.scores["my_metric_f1"] >= 0
+
+    def test_name(self):
+        assert self.metric.name == "my_metric"
+        assert self.metric.primary_key == "my_metric_f1"
+```
+
+Run the full suite to confirm nothing is broken:
+```bash
+uv run --package ocr-core pytest
 ```
 
 ---

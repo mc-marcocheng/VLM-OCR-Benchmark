@@ -7,8 +7,9 @@ from io import BytesIO
 
 import fitz
 import numpy as np
-from glmocr.utils.logging import get_logger
 from PIL import Image, ImageDraw
+
+from glmocr.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

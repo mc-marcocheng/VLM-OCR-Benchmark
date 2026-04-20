@@ -22,6 +22,28 @@ gpu = [
 ]
 chinese = ["opencc-python-reimplemented>=0.1.7"]
 optimal-matching = ["scipy>=1.11"]
+test = ["pytest>=8.0", "pytest-cov"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-W ignore::DeprecationWarning:pytz.tzinfo"
+
+[tool.coverage.run]
+source = ["ocr_core"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

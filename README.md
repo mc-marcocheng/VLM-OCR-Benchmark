@@ -33,6 +33,8 @@ ocr-benchmark/
 │   └── default.yaml                # Full default configuration
 ├── packages/
 │   └── ocr-core/                   # Shared framework library
+│       ├── src/ocr_core/           # Source code
+│       └── tests/                  # Unit and integration tests
 ├── models/                         # Isolated model projects (NOT workspace members)
 │   ├── model_glm_ocr/              # GLM-OCR
 │   ├── model_dots_mocr/            # Dots.MOCR
@@ -40,8 +42,8 @@ ocr-benchmark/
 │   └── huggingface_cache/          # Shared weight cache
 ├── scripts/
 │   ├── run_benchmark.py            # CLI entry-point
+│   ├── gradio_app.py               # Gradio dashboard
 │   └── convert_label_studio.py     # Label Studio export converter
-├── app.py                          # Gradio dashboard
 ├── data/
 │   ├── inputs/<test_set>/          # Input PDFs and images
 │   ├── groundtruths/<test_set>/    # Ground truth (.json or .txt)
@@ -167,6 +169,12 @@ uv run scripts/convert_label_studio.py <export.json> <test_set> [--config path/t
 # Examples:
 uv run scripts/convert_label_studio.py project-1-at-2026-01-01.json test_1
 uv run scripts/convert_label_studio.py project-1-at-2026-01-01.json test_1 --config custom_config.yaml
+```
+
+### Run Tests
+
+```bash
+uv run --package ocr-core pytest --cov --cov-report=html
 ```
 
 ---

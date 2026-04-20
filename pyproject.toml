@@ -16,7 +16,29 @@ dependencies = [
 gpu = ["ocr-core[gpu]"]
 chinese = ["ocr-core[chinese]"]
 optimal-matching = ["ocr-core[optimal-matching]"]
+test = ["ocr-core[test]"]
 dev = ["pre-commit>=4.0.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/ocr-core/tests"]
+addopts = "-W ignore::DeprecationWarning:pytz.tzinfo"
+
+[tool.coverage.run]
+source = ["packages/ocr-core/src/ocr_core"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [tool.uv.workspace]
 members = ["packages/*"]

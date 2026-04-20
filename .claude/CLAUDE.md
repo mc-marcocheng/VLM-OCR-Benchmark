@@ -28,14 +28,20 @@ packages/ocr-core/                      Shared library (workspace member)
       teds.py                           Table structure (HTML tree-edit distance)
       layout_iou.py                     Bounding-box IoU with Hungarian matching
       reading_order.py                  Kendall's τ on region order
+  tests/                                pytest test suite
+    conftest.py                         Shared fixtures, loguru silencing
+    metrics/                            Per-metric test modules
+    test_*.py                           Module-level tests
 models/                                 Isolated model projects (NOT workspace members)
   model_glm_ocr/                        GLM-OCR — transformers v5
   model_dots_mocr/                      Dots.MOCR — transformers v4
   ...
   huggingface_cache/                    Shared HF weight cache
 config/default.yaml                     Full default configuration
-scripts/run_benchmark.py                CLI entry-point
-app.py                                  Gradio dashboard
+scripts/
+  run_benchmark.py                      CLI entry-point
+  gradio_app.py                         Gradio dashboard
+  convert_label_studio.py               Label Studio export converter
 data/inputs/ groundtruths/ processed/   Data directories
 results/                                Output directory
 ```
@@ -51,14 +57,14 @@ uv sync --directory models/model_glm_ocr
 uv sync --directory models/model_dots_mocr
 
 # Run a benchmark
-python scripts/run_benchmark.py --model GLMOCR --test_set test_1 --device cuda
+uv run scripts/run_benchmark.py --model GLMOCR --test_set test_1 --device cuda
 
 # Launch dashboard
-python app.py
-```
+uv run scripts/gradio_app.py
 
-There are no tests yet. When tests are added they will likely use `pytest` and
-live in a `tests/` directory at the root.
+# Run tests
+uv run --package ocr-core pytest --cov --cov-report=term-missing
+```
 
 ## Architecture Decisions
 
@@ -118,6 +124,23 @@ return value — pass it directly to `process_words()`.
 `paired_bootstrap_test(a, b)` returns a p-value. Both use
 `numpy.random.default_rng(42)` for reproducibility.
 
+## Testing
+
+Tests live in `packages/ocr-core/tests/` with metric-specific tests grouped in
+a `metrics/` subfolder. Run from the repo root:
+
+```bash
+uv run --package ocr-core pytest                                    # all tests
+uv run --package ocr-core pytest packages/ocr-core/tests/metrics/   # metrics only
+uv run --package ocr-core pytest --cov                              # with coverage
+```
+
+Key conventions:
+- Shared fixtures are in `conftest.py` (e.g. `default_normaliser`, `tmp_dir`)
+- Use the `suppress_loguru` fixture for tests that intentionally trigger
+  warning/error logs
+- Tests should not depend on network access or GPU hardware
+
 ## Conventions
 
 - **Type hints everywhere** — use `from __future__ import annotations` at the
@@ -164,6 +187,7 @@ See **`models/.claude/CLAUDE.md`** for detailed step-by-step instructions, rules
 2. Register in `_BUILTIN` dict in `metrics/registry.py`.
 3. Export in `metrics/__init__.py`.
 4. Add to `config/default.yaml` under `metrics:`.
+5. Add tests in `packages/ocr-core/tests/metrics/test_<name>.py`.
 
 ## File Dependencies (import graph)
 
