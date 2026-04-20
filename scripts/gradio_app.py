@@ -117,12 +117,90 @@ class Dashboard:
         d = os.path.join(self.processed_dir, ts, stem)
         return len(glob.glob(os.path.join(d, "*.png"))) if os.path.isdir(d) else 0
 
-    def load_summary(self):
+    # ── Summary helpers ──────────────────────────────────────
+
+    def _load_summary_raw(self):
+        """Load the raw summary CSV as a DataFrame (deduplicated)."""
         csv = os.path.join(self.results_dir, "summary.csv")
         if not os.path.isfile(csv):
             return pd.DataFrame()
         df = pd.read_csv(csv)
         return df.drop_duplicates(subset=["Model", "Test Set", "Device"], keep="last")
+
+    # kept for backward compat with demo.load
+    def load_summary(self):
+        return self._load_summary_raw()
+
+    def _unique_sorted(self, df, col):
+        if col not in df.columns:
+            return []
+        return sorted(df[col].dropna().unique().tolist())
+
+    # Columns that are always visible (and hidden from the toggle)
+    _KEY_COLS = ["Model", "Test Set"]
+
+    def refresh_summary(self):
+        """Reload CSV, return updated filter choices + the full table."""
+        df = self._load_summary_raw()
+        if df.empty:
+            empty_dd = gr.update(choices=[], value=[])
+            return (
+                empty_dd,
+                empty_dd,
+                empty_dd,
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=[]),
+                df,
+            )
+
+        models = self._unique_sorted(df, "Model")
+        test_sets = self._unique_sorted(df, "Test Set")
+        devices = self._unique_sorted(df, "Device")
+        all_cols = df.columns.tolist()
+        sort_choices = [""] + all_cols
+
+        # Exclude always-visible key columns from the visibility toggle
+        toggleable_cols = [c for c in all_cols if c not in self._KEY_COLS]
+
+        return (
+            gr.update(choices=models, value=[]),
+            gr.update(choices=test_sets, value=[]),
+            gr.update(choices=devices, value=[]),
+            gr.update(choices=sort_choices, value=""),
+            gr.update(choices=toggleable_cols, value=toggleable_cols),
+            df,
+        )
+
+    def filter_summary(
+        self, models, test_sets, devices, sort_by, ascending, visible_cols
+    ):
+        """Apply categorical filters, sorting, and column visibility."""
+        df = self._load_summary_raw()
+        if df.empty:
+            return df
+
+        # ── Categorical filters (empty list ⇒ no filter) ───
+        if models:
+            df = df[df["Model"].isin(models)]
+        if test_sets:
+            df = df[df["Test Set"].isin(test_sets)]
+        if devices:
+            df = df[df["Device"].isin(devices)]
+
+        # ── Sort ────────────────────────────────────────────
+        if sort_by and sort_by in df.columns:
+            df = df.sort_values(by=sort_by, ascending=ascending, na_position="last")
+
+        # ── Column visibility ───────────────────────────────
+        if visible_cols:
+            # Always keep key columns even if user didn't tick them
+            keep = list(dict.fromkeys(self._KEY_COLS + list(visible_cols)))
+            keep = [c for c in keep if c in df.columns]
+            df = df[keep]
+
+        return df
+
+    # ── Explorer / Compare cascade helpers (unchanged) ──────
 
     def _cascade(self, ts=None, model=None):
         tss = self._list_test_sets()
@@ -334,14 +412,88 @@ class Dashboard:
                 "Evaluate and compare OCR models with comprehensive metrics."
             )
 
+            # ── Summary Tab ─────────────────────────────────
             with gr.Tab("📊 Summary"):
                 gr.Markdown("### All benchmark runs")
-                refresh = gr.Button("🔄 Refresh")
+
+                with gr.Row():
+                    s_model = gr.Dropdown(
+                        label="Filter by Model",
+                        choices=[],
+                        multiselect=True,
+                        interactive=True,
+                    )
+                    s_ts = gr.Dropdown(
+                        label="Filter by Test Set",
+                        choices=[],
+                        multiselect=True,
+                        interactive=True,
+                    )
+                    s_device = gr.Dropdown(
+                        label="Filter by Device",
+                        choices=[],
+                        multiselect=True,
+                        interactive=True,
+                    )
+                with gr.Row():
+                    s_sort = gr.Dropdown(
+                        label="Sort by",
+                        choices=[],
+                        value=None,
+                        interactive=True,
+                    )
+                    s_asc = gr.Radio(
+                        label="Order",
+                        choices=["Ascending", "Descending"],
+                        value="Ascending",
+                        interactive=True,
+                    )
+                with gr.Accordion("Column Visibility", open=False):
+                    s_cols = gr.CheckboxGroup(
+                        label="Visible columns",
+                        choices=[],
+                        value=[],
+                        interactive=True,
+                    )
+
+                with gr.Row():
+                    refresh = gr.Button("🔄 Refresh data", scale=1)
+                    apply_btn = gr.Button(
+                        "🔎 Apply filters", variant="primary", scale=1
+                    )
+
                 summary_df = gr.Dataframe(
                     value=pd.DataFrame(), interactive=False, wrap=True
                 )
-                refresh.click(fn=self.load_summary, outputs=summary_df)
 
+                # ── Wiring ──────────────────────────────────
+                # Refresh reloads CSV & resets filter choices
+                refresh.click(
+                    fn=self.refresh_summary,
+                    outputs=[s_model, s_ts, s_device, s_sort, s_cols, summary_df],
+                )
+
+                # Apply button filters the table
+                apply_btn.click(
+                    fn=lambda m, t, d, sb, order, vc: self.filter_summary(
+                        m, t, d, sb, order == "Ascending", vc
+                    ),
+                    inputs=[s_model, s_ts, s_device, s_sort, s_asc, s_cols],
+                    outputs=[summary_df],
+                )
+
+                # Reactive: re-filter on every filter change
+                _filter_inputs = [s_model, s_ts, s_device, s_sort, s_asc, s_cols]
+                for comp in [s_model, s_ts, s_device, s_sort, s_asc, s_cols]:
+                    comp.change(
+                        fn=lambda m, t, d, sb, order, vc: self.filter_summary(
+                            m, t, d, sb, order == "Ascending", vc
+                        ),
+                        inputs=_filter_inputs,
+                        outputs=[summary_df],
+                    )
+
+            # ── Explorer Tab ────────────────────────────────
             with gr.Tab("🔎 Explorer"):
                 with gr.Row():
                     with gr.Column(scale=1):
@@ -405,6 +557,7 @@ class Dashboard:
                 e_dev.change(fn=self.load_explorer, inputs=_in, outputs=_out)
                 e_page.change(fn=self.load_explorer, inputs=_in, outputs=_out)
 
+            # ── Compare Tab ─────────────────────────────────
             with gr.Tab("⚖️ Compare"):
                 gr.Markdown("### Side-by-side comparison")
                 with gr.Row():
@@ -447,13 +600,17 @@ class Dashboard:
                     outputs=[c_pa, c_ia, c_pb, c_ib],
                 )
 
+            # ── On-load initialisers ────────────────────────
+            demo.load(
+                fn=self.refresh_summary,
+                outputs=[s_model, s_ts, s_device, s_sort, s_cols, summary_df],
+            )
             demo.load(
                 fn=self.init_explorer, outputs=[e_ts, e_file, e_model, e_dev, e_page]
             )
             demo.load(
                 fn=self.init_compare, outputs=[c_ts, c_file, c_ma, c_mb, c_da, c_db]
             )
-            demo.load(fn=self.load_summary, outputs=summary_df)
 
         return demo
 
