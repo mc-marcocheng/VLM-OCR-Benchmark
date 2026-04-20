@@ -107,3 +107,15 @@ models:
     module: "model_chandra_ocr.worker"
     project_dir: "models/model_chandra_ocr"
     params: {}
+  LightOnOCR2:
+    module: "model_lighton_ocr2.worker"
+    project_dir: "models/model_lighton_ocr2"
+    params:
+      model_id: "lightonai/LightOnOCR-2-1B"
+      has_bbox: false
+  LightOnOCR2Bbox:
+    module: "model_lighton_ocr2.worker"
+    project_dir: "models/model_lighton_ocr2"
+    params:
+      model_id: "lightonai/LightOnOCR-2-1B-bbox"
+      has_bbox: true
