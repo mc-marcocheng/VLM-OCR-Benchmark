@@ -9,13 +9,16 @@ Usage:
 """
 
 import argparse
+import difflib
 import glob
+import html
 import json
 import math
 import os
 
 import gradio as gr
 import pandas as pd
+import plotly.express as px
 
 from ocr_core.config import BenchmarkConfig, load_config
 
@@ -49,13 +52,16 @@ def _slider(minimum=1, maximum=1, value=1):
 class Dashboard:
     def __init__(self, cfg: BenchmarkConfig):
         self.cfg = cfg
-        # Resolve paths relative to the project root (one level up from /scripts)
         self._root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-        # os.path.join safely handles both relative and absolute paths
         self.input_dir = os.path.join(self._root, cfg.data.input_dir)
         self.processed_dir = os.path.join(self._root, cfg.data.processed_dir)
         self.results_dir = os.path.join(self._root, cfg.data.results_dir)
+
+        # Cached summary: (mtime, DataFrame)
+        self._summary_cache: tuple[float, pd.DataFrame] = (0, pd.DataFrame())
+
+    # ── Filesystem helpers ───────────────────────────────────
 
     def _list_test_sets(self):
         return [
@@ -119,28 +125,104 @@ class Dashboard:
 
     # ── Summary helpers ──────────────────────────────────────
 
-    def _load_summary_raw(self):
-        """Load the raw summary CSV as a DataFrame (deduplicated)."""
-        csv = os.path.join(self.results_dir, "summary.csv")
-        if not os.path.isfile(csv):
-            return pd.DataFrame()
-        df = pd.read_csv(csv)
-        return df.drop_duplicates(subset=["Model", "Test Set", "Device"], keep="last")
+    # Columns that are always visible (and hidden from the toggle)
+    _KEY_COLS = ["Model", "Test Set"]
 
-    # kept for backward compat with demo.load
-    def load_summary(self):
-        return self._load_summary_raw()
+    def _load_summary_raw(self):
+        """Load summary CSV with mtime-based caching."""
+        csv_path = os.path.join(self.results_dir, "summary.csv")
+        if not os.path.isfile(csv_path):
+            self._summary_cache = (0, pd.DataFrame())
+            return pd.DataFrame()
+
+        mtime = os.path.getmtime(csv_path)
+        if self._summary_cache[0] == mtime:
+            return self._summary_cache[1].copy()
+
+        df = pd.read_csv(csv_path)
+        df = df.drop_duplicates(subset=["Model", "Test Set", "Device"], keep="last")
+        self._summary_cache = (mtime, df)
+        return df.copy()
 
     def _unique_sorted(self, df, col):
         if col not in df.columns:
             return []
         return sorted(df[col].dropna().unique().tolist())
 
-    # Columns that are always visible (and hidden from the toggle)
-    _KEY_COLS = ["Model", "Test Set"]
+    def _metric_columns(self, df):
+        """Numeric columns suitable for charting (exclude CI bounds)."""
+        if df.empty:
+            return []
+        return [c for c in df.select_dtypes(include="number").columns if "CI" not in c]
+
+    def _apply_categorical_filters(self, df, models, test_sets, devices):
+        if models:
+            df = df[df["Model"].isin(models)]
+        if test_sets:
+            df = df[df["Test Set"].isin(test_sets)]
+        if devices:
+            df = df[df["Device"].isin(devices)]
+        return df
+
+    def _make_stats_md(self, df_filtered, df_total):
+        """Quick-stats markdown string."""
+        n_models = (
+            df_filtered["Model"].nunique() if "Model" in df_filtered.columns else 0
+        )
+        n_ts = (
+            df_filtered["Test Set"].nunique()
+            if "Test Set" in df_filtered.columns
+            else 0
+        )
+        n_devices = (
+            df_filtered["Device"].nunique() if "Device" in df_filtered.columns else 0
+        )
+        n_filtered = len(df_filtered)
+        n_total = len(df_total)
+        showing = (
+            f"**{n_filtered}** of **{n_total}** runs"
+            if n_filtered != n_total
+            else f"**{n_total}** runs"
+        )
+        return (
+            f"📈 {showing} · "
+            f"**{n_models}** models · "
+            f"**{n_ts}** test sets · "
+            f"**{n_devices}** devices"
+        )
+
+    def _make_chart(self, df, metric):
+        """Bar chart comparing models on *metric*."""
+        if df.empty or not metric or metric not in df.columns:
+            return None
+        chart_df = df.dropna(subset=[metric]).sort_values(metric, ascending=False)
+        if chart_df.empty:
+            return None
+
+        multi_ts = (
+            chart_df["Test Set"].nunique() > 1
+            if "Test Set" in chart_df.columns
+            else False
+        )
+
+        fig = px.bar(
+            chart_df,
+            x="Model",
+            y=metric,
+            color="Test Set" if multi_ts else None,
+            barmode="group",
+            title=f"{metric} by Model",
+            text_auto=".4f",
+        )
+        fig.update_layout(
+            xaxis_tickangle=-35,
+            height=420,
+            margin=dict(b=120),
+        )
+        return fig
 
     def refresh_summary(self):
-        """Reload CSV, return updated filter choices + the full table."""
+        """Reload CSV, populate filter choices, return initial stats + chart + table."""
         df = self._load_summary_raw()
         if df.empty:
             empty_dd = gr.update(choices=[], value=[])
@@ -150,6 +232,9 @@ class Dashboard:
                 empty_dd,
                 gr.update(choices=[], value=None),
                 gr.update(choices=[], value=[]),
+                gr.update(choices=[], value=None),
+                "📈 No data loaded",
+                None,
                 df,
             )
 
@@ -158,9 +243,12 @@ class Dashboard:
         devices = self._unique_sorted(df, "Device")
         all_cols = df.columns.tolist()
         sort_choices = [""] + all_cols
-
-        # Exclude always-visible key columns from the visibility toggle
         toggleable_cols = [c for c in all_cols if c not in self._KEY_COLS]
+        metric_cols = self._metric_columns(df)
+
+        first_metric = metric_cols[0] if metric_cols else None
+        stats = self._make_stats_md(df, df)
+        chart = self._make_chart(df, first_metric)
 
         return (
             gr.update(choices=models, value=[]),
@@ -168,39 +256,90 @@ class Dashboard:
             gr.update(choices=devices, value=[]),
             gr.update(choices=sort_choices, value=""),
             gr.update(choices=toggleable_cols, value=toggleable_cols),
+            gr.update(choices=metric_cols, value=first_metric),
+            stats,
+            chart,
             df,
         )
 
-    def filter_summary(
-        self, models, test_sets, devices, sort_by, ascending, visible_cols
+    def filter_and_visualize(
+        self, models, test_sets, devices, sort_by, order, visible_cols, chart_metric
     ):
-        """Apply categorical filters, sorting, and column visibility."""
-        df = self._load_summary_raw()
-        if df.empty:
-            return df
+        """Apply filters → return (stats_md, dataframe, chart)."""
+        df_total = self._load_summary_raw()
+        if df_total.empty:
+            return "📈 No data loaded", pd.DataFrame(), None
 
-        # ── Categorical filters (empty list ⇒ no filter) ───
-        if models:
-            df = df[df["Model"].isin(models)]
-        if test_sets:
-            df = df[df["Test Set"].isin(test_sets)]
-        if devices:
-            df = df[df["Device"].isin(devices)]
+        df = self._apply_categorical_filters(df_total, models, test_sets, devices)
 
-        # ── Sort ────────────────────────────────────────────
+        # Stats (before sort / column trimming)
+        stats = self._make_stats_md(df, df_total)
+
+        # Chart (uses all columns, unsorted)
+        chart = self._make_chart(df, chart_metric)
+
+        # Sort
+        ascending = order == "Ascending"
         if sort_by and sort_by in df.columns:
             df = df.sort_values(by=sort_by, ascending=ascending, na_position="last")
 
-        # ── Column visibility ───────────────────────────────
+        # Column visibility
         if visible_cols:
-            # Always keep key columns even if user didn't tick them
             keep = list(dict.fromkeys(self._KEY_COLS + list(visible_cols)))
             keep = [c for c in keep if c in df.columns]
             df = df[keep]
 
-        return df
+        return stats, df, chart
 
-    # ── Explorer / Compare cascade helpers (unchanged) ──────
+    # ── Diff helper (Compare tab) ────────────────────────────
+
+    def _make_diff_html(self, text_a, text_b, label_a="A", label_b="B"):
+        """Character-level diff with colour highlights."""
+        if not text_a and not text_b:
+            return "<p><em>No text to compare.</em></p>"
+        a = text_a or ""
+        b = text_b or ""
+
+        legend = (
+            "<div style='margin-bottom:8px;font-size:0.85em;color:#222'>"
+            f"<span style='background:#fcc;color:#222;padding:2px 6px;border-radius:3px;"  # noqa: E501
+            f"text-decoration:line-through'>in {label_a}, not in {label_b}</span> &nbsp; "  # noqa: E501
+            f"<span style='background:#cfc;color:#222;padding:2px 6px;border-radius:3px'>"  # noqa: E501
+            f"in {label_b}, not in {label_a}</span></div>"
+        )
+
+        sm = difflib.SequenceMatcher(None, a, b)
+        parts: list[str] = []
+        for op, a1, a2, b1, b2 in sm.get_opcodes():
+            if op == "equal":
+                parts.append(html.escape(a[a1:a2]))
+            elif op == "replace":
+                parts.append(
+                    '<span style="background:#fcc;color:#222;text-decoration:line-through">'  # noqa: E501
+                    f"{html.escape(a[a1:a2])}</span>"
+                )
+                parts.append(
+                    f'<span style="background:#cfc;color:#222">{html.escape(b[b1:b2])}</span>'  # noqa: E501
+                )
+            elif op == "delete":
+                parts.append(
+                    '<span style="background:#fcc;color:#222;text-decoration:line-through">'  # noqa: E501
+                    f"{html.escape(a[a1:a2])}</span>"
+                )
+            elif op == "insert":
+                parts.append(
+                    f'<span style="background:#cfc;color:#222">{html.escape(b[b1:b2])}</span>'  # noqa: E501
+                )
+
+        body = "".join(parts)
+        return (
+            legend + "<div style='font-family:monospace;white-space:pre-wrap;"
+            "line-height:1.6;padding:10px;border:1px solid #ddd;"
+            "border-radius:6px;max-height:500px;overflow-y:auto;"
+            "color:#222;background:#fff'>" + body + "</div>"
+        )
+
+    # ── Explorer / Compare cascade helpers ───────────────────
 
     def _cascade(self, ts=None, model=None):
         tss = self._list_test_sets()
@@ -245,23 +384,23 @@ class Dashboard:
         return _slider(1, max(1, n), 1)
 
     def load_explorer(self, ts, fname, model, device, page):
-        empty = (None, "", "", pd.DataFrame(), "", "")
+        empty = (None, "", "", pd.DataFrame(), "", "", "")
         if not all([ts, fname, model, device]):
-            return *empty[:-1], "⚠️ Select all fields"
+            return *empty[:-1], "⚠️ Select all fields", ""
 
         data = self._load_result(ts, model, device)
         if not data:
-            return *empty[:-1], f"⚠️ No results for {model}/{device}"
+            return *empty[:-1], f"⚠️ No results for {model}/{device}", ""
 
         file_metrics = [m for m in data.get("metrics", []) if m["file"] == fname]
         if not file_metrics:
-            return *empty[:-1], f"⚠️ No data for {fname}"
+            return *empty[:-1], f"⚠️ No data for {fname}", ""
 
         page_num = max(1, int(page))
         img = self._page_image(ts, fname, page_num - 1)
         pm = next((m for m in file_metrics if m.get("page") == page_num), None)
         if pm is None:
-            return *empty[:-1], f"⚠️ No data for page {page_num} of {fname}"
+            return *empty[:-1], f"⚠️ No data for page {page_num} of {fname}", ""
 
         score_keys = set()
         for m in file_metrics:
@@ -340,13 +479,20 @@ class Dashboard:
 
         md += regions_md
 
+        pred_text = pm.get("predicted_text", "")
+        gt_text = pm.get("ground_truth_text") or ""
+        diff = self._make_diff_html(
+            gt_text, pred_text, label_a="Ground Truth", label_b="Predicted"
+        )
+
         return (
             img,
-            pm.get("predicted_text", ""),
-            pm.get("ground_truth_text") or "",
+            pred_text,
+            gt_text,
             pd.DataFrame(rows),
             md,
             f"✅ Page {page_num}",
+            diff,
         )
 
     def init_compare(self):
@@ -403,7 +549,10 @@ class Dashboard:
 
         pa, ia = _one(ma, da)
         pb, ib = _one(mb, db)
-        return pa, ia, pb, ib
+        diff = self._make_diff_html(pa, pb, label_a="Model A", label_b="Model B")
+        return pa, ia, pb, ib, diff
+
+    # ── UI ───────────────────────────────────────────────────
 
     def build_ui(self) -> gr.Blocks:
         with gr.Blocks(title="OCR Benchmark Dashboard") as demo:
@@ -415,6 +564,7 @@ class Dashboard:
             # ── Summary Tab ─────────────────────────────────
             with gr.Tab("📊 Summary"):
                 gr.Markdown("### All benchmark runs")
+                s_stats = gr.Markdown("📈 Loading…")
 
                 with gr.Row():
                     s_model = gr.Dropdown(
@@ -448,6 +598,11 @@ class Dashboard:
                         value="Ascending",
                         interactive=True,
                     )
+                    s_metric_plot = gr.Dropdown(
+                        label="Chart metric",
+                        choices=[],
+                        interactive=True,
+                    )
                 with gr.Accordion("Column Visibility", open=False):
                     s_cols = gr.CheckboxGroup(
                         label="Visible columns",
@@ -462,35 +617,54 @@ class Dashboard:
                         "🔎 Apply filters", variant="primary", scale=1
                     )
 
+                s_chart = gr.Plot(label="Model Comparison")
                 summary_df = gr.Dataframe(
                     value=pd.DataFrame(), interactive=False, wrap=True
                 )
 
-                # ── Wiring ──────────────────────────────────
-                # Refresh reloads CSV & resets filter choices
-                refresh.click(
-                    fn=self.refresh_summary,
-                    outputs=[s_model, s_ts, s_device, s_sort, s_cols, summary_df],
-                )
+                # ── Summary wiring ──────────────────────────
+                _refresh_outs = [
+                    s_model,
+                    s_ts,
+                    s_device,
+                    s_sort,
+                    s_cols,
+                    s_metric_plot,
+                    s_stats,
+                    s_chart,
+                    summary_df,
+                ]
+                refresh.click(fn=self.refresh_summary, outputs=_refresh_outs)
 
-                # Apply button filters the table
+                _filter_inputs = [
+                    s_model,
+                    s_ts,
+                    s_device,
+                    s_sort,
+                    s_asc,
+                    s_cols,
+                    s_metric_plot,
+                ]
+                _filter_outs = [s_stats, summary_df, s_chart]
+
                 apply_btn.click(
-                    fn=lambda m, t, d, sb, order, vc: self.filter_summary(
-                        m, t, d, sb, order == "Ascending", vc
-                    ),
-                    inputs=[s_model, s_ts, s_device, s_sort, s_asc, s_cols],
-                    outputs=[summary_df],
+                    fn=self.filter_and_visualize,
+                    inputs=_filter_inputs,
+                    outputs=_filter_outs,
                 )
-
-                # Reactive: re-filter on every filter change
-                _filter_inputs = [s_model, s_ts, s_device, s_sort, s_asc, s_cols]
-                for comp in [s_model, s_ts, s_device, s_sort, s_asc, s_cols]:
+                for comp in [
+                    s_model,
+                    s_ts,
+                    s_device,
+                    s_sort,
+                    s_asc,
+                    s_cols,
+                    s_metric_plot,
+                ]:
                     comp.change(
-                        fn=lambda m, t, d, sb, order, vc: self.filter_summary(
-                            m, t, d, sb, order == "Ascending", vc
-                        ),
+                        fn=self.filter_and_visualize,
                         inputs=_filter_inputs,
-                        outputs=[summary_df],
+                        outputs=_filter_outs,
                     )
 
             # ── Explorer Tab ────────────────────────────────
@@ -542,6 +716,9 @@ class Dashboard:
                             label="Ground Truth", interactive=False, lines=14
                         )
 
+                gr.Markdown("### 🔀 Diff  (Ground Truth → Predicted)")
+                e_diff = gr.HTML()
+
                 e_ts.change(
                     fn=self.on_ts,
                     inputs=[e_ts],
@@ -552,7 +729,7 @@ class Dashboard:
                 )
                 e_file.change(fn=self.on_file, inputs=[e_ts, e_file], outputs=[e_page])
                 _in = [e_ts, e_file, e_model, e_dev, e_page]
-                _out = [e_img, e_pred, e_gt, e_df, e_md, e_status]
+                _out = [e_img, e_pred, e_gt, e_df, e_md, e_status, e_diff]
                 e_btn.click(fn=self.load_explorer, inputs=_in, outputs=_out)
                 e_dev.change(fn=self.load_explorer, inputs=_in, outputs=_out)
                 e_page.change(fn=self.load_explorer, inputs=_in, outputs=_out)
@@ -578,14 +755,21 @@ class Dashboard:
                 with gr.Row():
                     with gr.Column():
                         c_pa = gr.Textbox(
-                            label="Model A — Predicted", lines=14, interactive=False
+                            label="Model A — Predicted",
+                            lines=14,
+                            interactive=False,
                         )
                         c_ia = gr.Markdown()
                     with gr.Column():
                         c_pb = gr.Textbox(
-                            label="Model B — Predicted", lines=14, interactive=False
+                            label="Model B — Predicted",
+                            lines=14,
+                            interactive=False,
                         )
                         c_ib = gr.Markdown()
+
+                gr.Markdown("### 🔀 Character-level Diff  (A → B)")
+                c_diff = gr.HTML()
 
                 c_ts.change(
                     fn=self.on_cmp_ts,
@@ -597,19 +781,18 @@ class Dashboard:
                 c_btn.click(
                     fn=self.load_compare,
                     inputs=[c_ts, c_file, c_ma, c_da, c_mb, c_db],
-                    outputs=[c_pa, c_ia, c_pb, c_ib],
+                    outputs=[c_pa, c_ia, c_pb, c_ib, c_diff],
                 )
 
             # ── On-load initialisers ────────────────────────
+            demo.load(fn=self.refresh_summary, outputs=_refresh_outs)
             demo.load(
-                fn=self.refresh_summary,
-                outputs=[s_model, s_ts, s_device, s_sort, s_cols, summary_df],
+                fn=self.init_explorer,
+                outputs=[e_ts, e_file, e_model, e_dev, e_page],
             )
             demo.load(
-                fn=self.init_explorer, outputs=[e_ts, e_file, e_model, e_dev, e_page]
-            )
-            demo.load(
-                fn=self.init_compare, outputs=[c_ts, c_file, c_ma, c_mb, c_da, c_db]
+                fn=self.init_compare,
+                outputs=[c_ts, c_file, c_ma, c_mb, c_da, c_db],
             )
 
         return demo
@@ -636,14 +819,10 @@ def main():
     )
     args = parser.parse_args()
 
-    # Load configuration
     cfg = load_config(args.config)
-
-    # Initialize UI
     dashboard = Dashboard(cfg)
     app = dashboard.build_ui()
 
-    # Launch
     app.launch(
         theme=gr.themes.Soft(),
         server_name=args.host,

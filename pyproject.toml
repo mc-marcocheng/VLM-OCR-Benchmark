@@ -9,6 +9,7 @@ dependencies = [
     "loguru>=0.7.3",
     "pandas>=3.0.2",
     "label-studio>=1.23.0",
+    "plotly>=6.7.0",
 ]
 
 [project.optional-dependencies]
