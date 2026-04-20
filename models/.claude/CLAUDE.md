@@ -73,7 +73,6 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 # Set environment variables BEFORE importing transformers to strictly enforce cache location
 os.environ["HF_HOME"] = CACHE_DIR
 os.environ["HF_HUB_CACHE"] = CACHE_DIR
-os.environ["TRANSFORMERS_CACHE"] = CACHE_DIR
 # ─────────────────────────────────────────────────────────────
 
 import psutil

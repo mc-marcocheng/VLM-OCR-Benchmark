@@ -68,3 +68,15 @@ models:
     project_dir: "models/model_dots_mocr"
     module: "model_dots_mocr.worker"
     params: {}
+  NanonetsOCR-3B:
+    project_dir: "models/model_nanonets_ocr"
+    module: "model_nanonets_ocr.worker"
+    params:
+      model_id: "nanonets/Nanonets-OCR2-3B"
+      max_new_tokens: 15000
+  NanonetsOCR-1.5B:
+    project_dir: "models/model_nanonets_ocr"
+    module: "model_nanonets_ocr.worker"
+    params:
+      model_id: "nanonets/Nanonets-OCR2-1.5B-exp"
+      max_new_tokens: 15000
