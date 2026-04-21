@@ -94,6 +94,10 @@ models:
     module: "model_monkey_ocr.worker"
     params:
       model_id: "echo840/MonkeyOCR-pro-3B"
+  InfinityParser:
+    module: "model_infinity_parser.worker"
+    project_dir: "models/model_infinity_parser"
+    params: {}
   InfinityParser2Pro:
     module: "model_infinity_parser2.worker"
     project_dir: "models/model_infinity_parser2"
