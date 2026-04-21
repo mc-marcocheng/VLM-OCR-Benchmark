@@ -123,3 +123,7 @@ models:
     params:
       model_id: "lightonai/LightOnOCR-2-1B-bbox"
       has_bbox: true
+  PaddleOCRVL:
+    module: "model_paddle_ocr_vl.worker"
+    project_dir: "models/model_paddle_ocr_vl"
+    params: {}
