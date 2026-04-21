@@ -127,3 +127,7 @@ models:
     module: "model_paddle_ocr_vl.worker"
     project_dir: "models/model_paddle_ocr_vl"
     params: {}
+  Qwen35:
+    module: "model_qwen35.worker"
+    project_dir: "models/model_qwen35"
+    params: {}
